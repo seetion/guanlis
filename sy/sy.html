@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>贵州希田 | 智慧农业</title>
+    <!-- 引入 Google Fonts 提升现代感 + Font Awesome 6 免费图标库 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 50%, #a5d6a7 100%);
+            background-attachment: fixed;
+            color: #1f2e1c;
+            line-height: 1.4;
+            padding: 24px 20px;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(76, 175, 80, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(76, 175, 80, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at top, rgba(129, 199, 132, 0.15) 0%, transparent 50%),
+                        radial-gradient(ellipse at bottom right, rgba(165, 214, 167, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 整体容器 */
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 头部区域 */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 28px;
+            gap: 16px;
+        }
+
+        .logo-area h1 {
+            font-size: 1.9rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #2b6e3c, #4c9a2a);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-area h1 i {
+            background: none;
+            -webkit-background-clip: unset;
+            background-clip: unset;
+            color: #3b8b2e;
+            font-size: 2rem;
+        }
+
+        .date-badge {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 8px 18px;
+            border-radius: 40px;
+            box-shadow: 0 4px 16px rgba(46, 125, 50, 0.08),
+                        0 0 0 1px rgba(129, 199, 132, 0.2);
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: #2c5e2a;
+            border: 1px solid rgba(129, 199, 132, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .date-badge:hover {
+            box-shadow: 0 6px 20px rgba(46, 125, 50, 0.12),
+                        0 0 15px rgba(129, 199, 132, 0.15);
+            border-color: rgba(129, 199, 132, 0.5);
+        }
+
+        .date-badge i {
+            margin-right: 8px;
+            color: #4c9a2a;
+        }
+
+        /* 卡片网格 */
+        .grid-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 22px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 20px 20px;
+            box-shadow: 0 8px 32px rgba(46, 125, 50, 0.1),
+                        0 0 0 1px rgba(129, 199, 132, 0.25),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.7);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #66bb6a, #81c784, #a5d6a7);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(46, 125, 50, 0.15),
+                        0 0 20px rgba(129, 199, 132, 0.2),
+                        0 0 0 1px rgba(129, 199, 132, 0.4);
+            border-color: rgba(129, 199, 132, 0.5);
+        }
+
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
+        .stat-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #6f8f67;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-value {
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: #2c5a2a;
+            line-height: 1.1;
+            margin-bottom: 6px;
+        }
+
+        .stat-unit {
+            font-size: 0.9rem;
+            font-weight: 400;
+            color: #6b8c5c;
+        }
+
+        .trend {
+            font-size: 0.75rem;
+            color: #58963b;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            justify-content: flex-end;
+        }
+
+        /* 双栏布局 */
+        .two-columns {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 28px;
+            margin-bottom: 32px;
+        }
+
+        /* 公共卡片样式 */
+        .card {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 20px 24px;
+            box-shadow: 0 8px 32px rgba(46, 125, 50, 0.1),
+                        0 0 0 1px rgba(129, 199, 132, 0.25),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #66bb6a, #81c784, #a5d6a7);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 12px 40px rgba(46, 125, 50, 0.12),
+                        0 0 20px rgba(129, 199, 132, 0.15),
+                        0 0 0 1px rgba(129, 199, 132, 0.4);
+            border-color: rgba(129, 199, 132, 0.5);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            border-bottom: 2px solid #eef4e9;
+            padding-bottom: 12px;
+        }
+
+        .card-header h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2a5426;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mock-btn {
+            font-size: 0.75rem;
+            background: rgba(129, 199, 132, 0.15);
+            padding: 5px 12px;
+            border-radius: 60px;
+            color: #457b36;
+            cursor: default;
+            font-weight: 500;
+            border: 1px solid rgba(129, 199, 132, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .mock-btn:hover {
+            background: rgba(129, 199, 132, 0.25);
+            border-color: rgba(129, 199, 132, 0.5);
+            box-shadow: 0 0 10px rgba(129, 199, 132, 0.2);
+        }
+
+        /* 任务列表样式 */
+        .task-list {
+            list-style: none;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 0;
+            border-bottom: 1px solid #edf5e7;
+        }
+
+        .task-info {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .task-check {
+            width: 20px;
+            height: 20px;
+            background: rgba(232, 245, 233, 0.8);
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #5c9c3e;
+            font-size: 12px;
+            cursor: default;
+            border: 1px solid rgba(129, 199, 132, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .task-item:hover .task-check {
+            background: rgba(200, 230, 201, 0.8);
+            box-shadow: 0 0 8px rgba(129, 199, 132, 0.3);
+        }
+
+        .task-title {
+            font-weight: 500;
+        }
+
+        .task-priority {
+            font-size: 0.7rem;
+            padding: 2px 10px;
+            border-radius: 50px;
+            background: #fef3c7;
+            color: #b8611a;
+        }
+
+        .priority-high {
+            background: #ffe3e3;
+            color: #bc3f2e;
+        }
+
+        /* 图表模拟区域 */
+        .chart-placeholder {
+            background: rgba(232, 245, 233, 0.5);
+            border-radius: 16px;
+            padding: 16px;
+            margin-top: 6px;
+            border: 1px solid rgba(129, 199, 132, 0.2);
+        }
+        /* 图例样式 */
+        .plot-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+        }
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        /* 折线图样式 */
+        .line-chart-container {
+            position: relative;
+            height: 200px;
+            margin: 20px 0;
+            padding: 0 20px;
+        }
+
+        .line-chart {
+            position: relative;
+            width: 100%;
+            height: 160px;
+        }
+
+        .chart-axis {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+        }
+
+        .chart-grid-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            border-top: 1px dashed rgba(129, 199, 132, 0.3);
+        }
+
+        .chart-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+        }
+
+        .line-path {
+            fill: none;
+            stroke: #66bb6a;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .line-area {
+            fill: url(#lineGradient);
+        }
+
+        .data-point {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #66bb6a;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 6px rgba(102, 187, 106, 0.4);
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .data-point:hover {
+            transform: translate(-50%, -50%) scale(1.3);
+            box-shadow: 0 4px 12px rgba(102, 187, 106, 0.6);
+        }
+
+        .data-point-value {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(102, 187, 106, 0.9);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            margin-bottom: 6px;
+        }
+
+        .data-point:hover .data-point-value {
+            opacity: 1;
+        }
+
+        .chart-labels {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 8px;
+        }
+
+        .chart-label {
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #43673a;
+        }
+
+        /* 保留柱状图样式以防需要 */
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 20px;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 12px 0;
+        }
+
+        .bar-item {
+            text-align: center;
+            flex: 1;
+        }
+
+        .bar {
+            background: #77b35f;
+            height: calc(70px + 30px); /* dynamic via inline style? 直接用固定比例展示模拟 */
+            border-radius: 16px 16px 8px 8px;
+            transition: 0.2s;
+            background: linear-gradient(0deg, #4b8b3a, #8bc76c);
+            min-height: 20px;
+        }
+
+        .bar-label {
+            margin-top: 10px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #43673a;
+        }
+
+        /* 最近记录区域 */
+        .log-list {
+            margin-top: 8px;
+        }
+        .log-entry {
+            display: flex;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #eef2e9;
+            align-items: center;
+        }
+        .log-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(129, 199, 132, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #498c35;
+            border: 1px solid rgba(129, 199, 132, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .log-entry:hover .log-icon {
+            background: rgba(129, 199, 132, 0.3);
+            box-shadow: 0 0 10px rgba(129, 199, 132, 0.3);
+        }
+        .log-detail {
+            flex: 1;
+        }
+        .log-text {
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+        .log-time {
+            font-size: 0.7rem;
+            color: #8aa87d;
+        }
+
+        /* 桑叶采摘预警卡片 额外模块 */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin-top: 10px;
+        }
+        .metric {
+            background: rgba(232, 245, 233, 0.6);
+            border-radius: 16px;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid rgba(129, 199, 132, 0.25);
+            transition: all 0.3s ease;
+        }
+
+        .metric:hover {
+            background: rgba(200, 230, 201, 0.6);
+            border-color: rgba(129, 199, 132, 0.4);
+            box-shadow: 0 4px 12px rgba(46, 125, 50, 0.1);
+        }
+        .metric .number {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #3e7930;
+        }
+
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #6b8c5c;
+            border-top: 1px solid rgba(129, 199, 132, 0.3);
+            padding-top: 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        @media (max-width: 780px) {
+            .two-columns {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+            .stat-value {
+                font-size: 1.8rem;
+            }
+            body {
+                padding: 16px;
+            }
+        }
+
+        /* 提醒小标签 */
+        .badge-warning {
+            background: rgba(255, 238, 217, 0.9);
+            border-radius: 40px;
+            padding: 5px 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: #b46f1a;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .badge-warning:hover {
+            box-shadow: 0 0 10px rgba(255, 193, 7, 0.2);
+            border-color: rgba(255, 193, 7, 0.5);
+        }
+
+        button, .mock-btn, .task-check, .stat-card {
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <!-- 头部区域 -->
+    <div class="header">
+        <div class="logo-area">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <!-- Logo占位图 -->
+                <img id="mainLogo" src="https://img.seetion.cn/images/png/400x400logo.png" alt="Logo" style="width: 60px; height: 60px; border-radius: 12px; object-fit: cover; box-shadow: 0 4px 12px rgba(102, 187, 106, 0.3);">
+                <div>
+                    <h1 style="margin: 0; line-height: 1.2; font-size: 1.5rem;">贵州希田智慧农业科技有限公司</h1>
+                    <div style="font-size: 0.85rem; color: #61944b; margin-top: 4px;">桑园概况 · 智慧管理系统</div>
+                </div>
+            </div>
+        </div>
+        <div class="date-badge">
+            <i class="far fa-calendar-alt"></i> 
+            <span id="currentDate"></span>
+        </div>
+    </div>
+
+    <!-- 关键指标卡片 桑园整体数据 -->
+    <div class="grid-overview">
+        <div class="stat-card" id="card-syushu">
+            <div class="stat-title"><i class="fas fa-tree"></i> <span id="title-syushu">桑树总数</span></div>
+            <div class="stat-value"><span id="value-syushu">--</span> <span class="stat-unit" id="unit-syushu">株</span></div>
+            <div class="trend" id="trend-syushu"><i class="fas fa-arrow-up"></i> 加载中...</div>
+        </div>
+        <div class="stat-card" id="card-caijiliang">
+            <div class="stat-title"><i class="fas fa-leaf"></i> <span id="title-caijiliang">今日采摘量</span></div>
+            <div class="stat-value"><span id="value-caijiliang">--</span> <span class="stat-unit" id="unit-caijiliang">kg</span></div>
+            <div class="trend" id="trend-caijiliang"><i class="fas fa-clock"></i> 加载中...</div>
+        </div>
+        <div class="stat-card" id="card-shidu">
+            <div class="stat-title"><i class="fas fa-tachometer-alt"></i> <span id="title-shidu">土壤湿度</span></div>
+            <div class="stat-value"><span id="value-shidu">--</span><span class="stat-unit" id="unit-shidu">%</span></div>
+            <div class="trend" id="trend-shidu"><i class="fas fa-water"></i> 加载中...</div>
+        </div>
+        <div class="stat-card" id="card-guangzhao">
+            <div class="stat-title"><i class="fas fa-sun"></i> <span id="title-guangzhao">光照强度</span></div>
+            <div class="stat-value"><span id="value-guangzhao">--</span> <span class="stat-unit" id="unit-guangzhao">klx</span></div>
+            <div class="trend" id="trend-guangzhao"><i class="fas fa-check-circle"></i> 加载中...</div>
+        </div>
+    </div>
+
+    <!-- 第二组功能区：桑园健康监测+桑园地块分布 -->
+    <div class="two-columns">
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-microchip"></i> 环境 & 健康监测</h2>
+                <div class="mock-btn" id="weather-refresh"><i class="fas fa-sync-alt"></i> 实时数据</div>
+            </div>
+            <div class="info-grid">
+                <div class="metric">
+                    <i class="fas fa-temperature-low"></i>
+                    <div class="number" id="temperature">--°C</div>
+                    <div>气温</div>
+                </div>
+                <div class="metric">
+                    <i class="fas fa-tint"></i>
+                    <div class="number" id="humidity">--%</div>
+                    <div>空气湿度</div>
+                </div>
+                <div class="metric">
+                    <i class="fas fa-seedling"></i>
+                    <div class="number">0.21%</div>
+                    <div>病害风险指数</div>
+                </div>
+                <div class="metric">
+                    <span id="weather-icon" style="font-size: 1.5rem;">☀️</span>
+                    <div class="number" id="weather-desc" style="font-size: 1.2rem;">晴朗</div>
+                    <div>今日天气</div>
+                </div>
+                
+            </div>
+            <div style="margin-top: 58px; background: rgba(244, 251, 240, 0.8); border-radius: 20px; padding: 12px; border: 1px solid rgba(129, 199, 132, 0.25);" class="ai-advice-container">
+                <i class="fas fa-robot ai-robot-icon" style="color: #1c74c7;"></i> <span class="ai-typing-text" style="color: #1565C0; font-size: 0.8rem;"></span><span class="ai-cursor" style="color: #1565C0; font-size: 0.8rem;">|</span>
+            </div>
+            <style>
+                .ai-advice-container ~ style.ai-local-style,
+                .ai-advice-container ~ script.ai-local-script { display: none; }
+            </style>
+            <style class="ai-local-style">
+                .ai-robot-icon {
+                    display: inline-block;
+                    animation: aiBreathe 2s ease-in-out infinite;
+                }
+                @keyframes aiBreathe {
+                    0%, 100% { transform: scale(1); opacity: 1; }
+                    50% { transform: scale(1.15); opacity: 0.8; }
+                }
+                .ai-cursor {
+                    animation: aiBlink 0.8s step-end infinite;
+                    margin-left: 2px;
+                }
+                @keyframes aiBlink {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0; }
+                }
+            </style>
+            <script class="ai-local-script">
+                (function(){
+                    var advices = [
+                        "当前砧木苗很脆弱，建议避光遮荫。",
+                        "天气转晴，建议及时通风炼苗。",
+                        "土壤偏干，可在上午微雾喷灌。",
+                        "注意防虫，及时检查叶片背面。",
+                        "近期温差大，适当增加保温措施。",
+                        "移栽前需提前炼苗3-5天。",
+                        "大蚕期食桑量大，需提前备足新鲜桑叶，按需投喂。",
+                        "当前气温偏低，建议加盖无纺布保温，避免冻害。",
+    "空气湿度偏高，建议加强通风，预防灰霉病发生。",
+    "光照过强，需用遮阳网进行遮阴，防止叶片灼伤。",
+    "土壤EC值偏高，建议淋洗苗床，降低盐分胁迫。",
+    "苗床出现轻微徒长，建议控制浇水，增强光照。",
+    "近期有降雨预报，注意疏通苗床排水沟，防积水烂根。",
+    "叶片出现黄化，建议补充微量元素，排查根系问题。",
+    "桑苗进入快速生长期，可追施稀薄氮磷钾水溶肥。",
+    "发现蚜虫痕迹，建议用物理方法清除，避免化学残留。",
+    "移栽前1周停止浇水炼苗，提高移栽成活率。",
+    "蚕室当前湿度偏高，建议开启排湿风机，防止蚕病。",
+    "蚕室温度波动较大，建议检查温控设备，稳定环境。",
+    "桑叶存储时间较长，建议摊开散热，防止发热变质。",
+    "蚕沙堆积较多，建议及时清理，保持蚕室清洁通风。",
+                        "保持苗床湿润但忌积水。"
+                        
+                    ];
+                    var textSpan = document.querySelector('.ai-typing-text');
+                    var chosen = advices[Math.floor(Math.random() * advices.length)];
+                    var prefix = "AI 建议：";
+                    var fullText = prefix + chosen;
+                    var i = 0;
+                    function typeWriter() {
+                        if (i < fullText.length) {
+                            textSpan.textContent += fullText.charAt(i);
+                            i++;
+                            setTimeout(typeWriter, 60 + Math.random() * 40);
+                        }
+                    }
+                    setTimeout(typeWriter, 300);
+                })();
+            </script>
+        </div>
+
+        <!-- 右侧: 桑园地块分布 -->
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-map"></i> 桑园地块分布</h2>
+                <div class="mock-btn">卫星地图</div>
+            </div>
+            <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+            <style>
+                #map{ width:100%; height:320px; border-radius:12px; }
+                .map-overlay {
+                    position: absolute;
+                    top: 8px;
+                    right: 12px;
+                    z-index: 1000;
+                    pointer-events: none;
+                }
+                .map-overlay-text {
+                    background: rgba(255,255,255,0.5);
+                    backdrop-filter: blur(4px);
+                    padding: 4px 10px;
+                    border-radius: 6px;
+                    font-size: 10px;
+                    color: #2c5a2a;
+                    font-weight: 500;
+                    border: 1px solid rgba(129, 199, 132, 0.3);
+                }
+            </style>
+            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+            
+            <div style="position: relative;">
+                <div class="map-overlay">
+                <div class="legend-item"><div class="fas fa-map-marker-alt" style="color: #00BFFF;"></div><span style="color:#fff;">拉朗区</span></div>
+                <div class="legend-item"><div class="fas fa-map-marker-alt" style="color: #2ed8b6;"></div><span style="color:#fff;">拉满区</span></div>
+                <div class="legend-item"><div class="fas fa-map-marker-alt" style="color: #3252bd;"></div><span style="color:#fff;">构绕区</span></div>
+                <div class="legend-item"><div class="fas fa-map-marker-alt" style="color: #05f539;"></div><span style="color:#fff;">可间区</span></div>
+                <!--<div class="map-overlay-text"><i class="fas fa-map-marker-alt" style="color: #00BFFF;"></i>拉朗区</div>-->
+                <!--<div class="map-overlay-text"><i class="fas fa-map-marker-alt" style="color: #2ed8b6;"></i>拉满区</div>-->
+                <!--<div class="map-overlay-text"><i class="fas fa-map-marker-alt" style="color: #3252bd;"></i>构绕区</div>-->
+                <!--<div class="map-overlay-text"><i class="fas fa-map-marker-alt" style="color: #05f539;"></i>可间区</div>-->
+                    
+                </div>
+                <div id="map"></div>
+            </div>
+            
+            <div class="plot-legend"style="display: flex; justify-content: center; gap: 5px;">
+                <div class="legend-item"><i class="fas fa-tint" style="color: #4c9a2a;"></i><span>灌溉覆盖: 56%</span></div>
+                <div class="legend-item"><i class="fas fa-sun" style="color: #d97706;"></i><span>光照覆盖: 98%</span></div>
+            </div>
+            <div style="margin-top: 10px; padding-top: 6px; border-top: 1px dashed rgba(129, 199, 132, 0.3);">
+            <div class="trend" style="justify-content: center; font-size: 0.8rem;">
+                <i class="fas fa-chart-pie"></i> 构绕区产量占比最高(25.3%)，拉朗区次之(23.6%)</div>
+            </div>
+            
+            <script>
+                // 初始化地图（贵州荔波坐标）
+                let map = L.map('map').setView([25.4702, 107.6447], 15);
+                
+                // 卫星底图（只读，游客无法编辑）
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+                    attribution: ''
+                }).addTo(map);
+                
+                // 6块桑园地块（游客只能看）
+                let plots = [
+                    {
+    coords: [
+        [25.4666, 107.6446],
+        [25.4667, 107.6447],
+        [25.4669, 107.6449],
+        [25.4672, 107.6449],
+        [25.4674, 107.6451],
+        [25.4676, 107.6451],
+        [25.4676, 107.6449],
+        [25.4675, 107.6448],
+        [25.4674, 107.6448],
+        [25.4672, 107.6448],
+        [25.4671, 107.6448],
+        [25.4670, 107.6447],
+        [25.4669, 107.6447],
+        [25.4668, 107.6446],
+    ],
+    color: '#05f539',
+    name: '可间区'
+},
+                    {
+    coords: [
+        [25.4714, 107.6421],
+        [25.4716, 107.6422],
+        [25.4719, 107.6422],
+        [25.4720, 107.6421],
+        [25.4722, 107.6420],
+        [25.4721, 107.6419],
+        [25.4720, 107.6418],
+        [25.4720, 107.6416],
+        [25.4720, 107.6415],
+        [25.4721, 107.6414],
+        [25.4723, 107.6413],
+        [25.4725, 107.6412],
+        [25.4728, 107.6413],
+        [25.4730, 107.6415],
+        [25.4732, 107.6414],
+        [25.4733, 107.6412],
+        [25.4734, 107.6410],
+        [25.4735, 107.6408],
+        [25.4735, 107.6406],
+        [25.4735, 107.6404],
+        [25.4734, 107.6402],
+        [25.4735, 107.6401],
+        [25.4735, 107.6398],
+        [25.4735, 107.6396],
+        [25.4736, 107.6394],
+        [25.4737, 107.6392],
+        [25.4737, 107.6391],
+        [25.4737, 107.6389],
+        [25.4735, 107.6388],
+        [25.4732, 107.6390],
+        [25.4730, 107.6392],
+        [25.4727, 107.6394],
+        [25.4723, 107.6393],
+        [25.4719, 107.6391],
+        [25.4717, 107.6390],
+        [25.4714, 107.6390],
+        [25.4711, 107.6390],
+        [25.4708, 107.6390],
+        [25.4708, 107.6392],
+        [25.4711, 107.6393],
+        [25.4714, 107.6393],
+        [25.4716, 107.6395],
+        [25.4717, 107.6396],
+        [25.4718, 107.6398],
+        [25.4719, 107.6401],
+        [25.4719, 107.6404],
+        [25.4719, 107.6408],
+        [25.4718, 107.6412],
+        [25.4718, 107.6413],
+        [25.4717, 107.6416],
+        [25.4716, 107.6418],
+        [25.4715, 107.6420],
+    ],
+    color: '#3252bd',
+    name: '构绕区'
+},
+{
+    coords: [
+        [25.4691, 107.6508],
+        [25.4690, 107.6509],
+        [25.4689, 107.6510],
+        [25.4689, 107.6511],
+        [25.4689, 107.6512],
+        [25.4688, 107.6513],
+        [25.4687, 107.6514],
+        [25.4686, 107.6514],
+        [25.4685, 107.6514],
+        [25.4684, 107.6513],
+        [25.4684, 107.6515],
+        [25.4686, 107.6516],
+        [25.4689, 107.6515],
+        [25.4692, 107.6515],
+        [25.4694, 107.6515],
+        [25.4694, 107.6514],
+        [25.4693, 107.6513],
+        [25.4694, 107.6511],
+        [25.4694, 107.6510],
+        [25.4693, 107.6510],
+    ],
+    color: '#2ed8b6',
+    name: '拉满区'
+},
+                    {
+        coords: [
+        [25.4705, 107.6390],
+        [25.4708, 107.6389],
+        [25.4712, 107.6389],
+        [25.4715, 107.6389],
+        [25.4718, 107.6390],
+        [25.4720, 107.6390],
+        [25.4720, 107.6389],
+        [25.4720, 107.6386],
+        [25.4720, 107.6384],
+        [25.4720, 107.6382],
+        [25.4720, 107.6381],
+        [25.4719, 107.6379],
+        [25.4717, 107.6379],
+        [25.4716, 107.6379],
+        [25.4715, 107.6378],
+        [25.4714, 107.6376],
+        [25.4713, 107.6375],
+        [25.4713, 107.6374],
+        [25.4712, 107.6372],
+        [25.4711, 107.6373],
+        [25.4709, 107.6372],
+        [25.4708, 107.6372],
+        [25.4707, 107.6372],
+        [25.4705, 107.6371],
+        [25.4705, 107.6370],
+        [25.4704, 107.6370],
+        [25.4703, 107.6372],
+        [25.4704, 107.6375],
+        [25.4705, 107.6378],
+        [25.4704, 107.6380],
+        [25.4704, 107.6382],
+        [25.4703, 107.6383],
+        [25.4703, 107.6384],
+        [25.4703, 107.6386],
+        [25.4703, 107.6388],
+        [25.4704, 107.6389],
+    ],
+    color: '#00BFFF',
+    name: '拉朗区'
+},
+                ];
+                
+                plots.forEach(item=>{
+                    L.polygon(item.coords,{
+                        color:item.color, fillColor:item.color, fillOpacity:0.2
+                    }).addTo(map).bindPopup(`<b>${item.name}</b>`);
+                });
+            </script>
+        </div>
+    </div>
+
+    <!-- 双栏内容：左侧任务及预警右侧图表 -->
+    <div class="two-columns">
+        <!-- 左侧: 待办任务 & 桑园提醒 -->
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-clipboard-list"></i> <span id="title-nongshi">近期农事任务</span></h2>
+                <div class="mock-btn"><i class="fas-regular fa-plus"></i> 任务状态</div>
+            </div>
+            <ul class="task-list" id="task-list">
+                <!-- 任务列表由云端动态加载 -->
+                <li class="task-item">
+                    <div class="task-info">
+                        <div class="task-check"><i class="fas fa-spinner fa-spin" style="color:#77b35f;"></i></div>
+                        <span class="task-title">加载中...</span>
+                    </div>
+                    <div class="task-priority">--</div>
+                </li>
+            </ul>
+            <div class="badge-warning" style="margin-top: 12px; display: inline-block;" id="warning-badge">
+                <i class="fas fa-exclamation-triangle"></i> <span id="warning-text">加载中...</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-history"></i> <span id="title-nongshi-log">最近农事记录</span></h2>
+                <div class="mock-btn">操作日志</div>
+            </div>
+            <div class="log-list" id="nongshi-log-list">
+                <!-- 动态加载 -->
+                <div class="log-entry">
+                    <div class="log-icon"><i class="fas fa-spinner fa-spin"></i></div>
+                    <div class="log-detail">
+                        <div class="log-text">加载中...</div>
+                        <div class="log-time">--</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 采摘计划与库存 -->
+    <div class="card" style="margin-bottom: 20px;">
+        <div class="card-header">
+            <h2><i class="fas fa-boxes"></i> <span id="title-caiji">桑叶采摘计划 & 库存概览</span></h2>
+            <div class="mock-btn">本周计划</div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 24px; justify-content: space-between;">
+            <div style="flex:1; min-width: 140px; text-align: center; border-left: 0px solid #66bb6a; padding-left: 12px;">
+                <div><i class="fas fa-calendar-week"></i> 今日计划采摘: <strong id="jinri-jihua">-- kg</strong></div>
+                <div style="margin-top: 8px;">已完成: <span id="jinri-wancheng">--</span> kg <span id="jinri-bili" style="background:rgba(165, 214, 167, 0.6); padding:2px 8px; border-radius: 30px; border: 1px solid rgba(129, 199, 132, 0.3);">--%</span></div>
+                <div class="trend" style="margin-top: 10px; justify-content: center;"><i class="fas fa-hourglass-half"></i> 剩余进度 <span id="jinri-shengyu">--</span>kg</div>
+            </div>
+            <div style="flex:1; min-width: 140px; text-align: center; border-left: 1px solid #66bb6a; padding-left: 12px;">
+                <div><i class="fas fa-warehouse"></i> 桑园桑叶库存: <strong id="kucun-dun">-- 吨</strong></div>
+                <div>已摘鲜叶储备: <span id="xianye-bei">--</span> kg</div>
+                <div class="trend" style="justify-content: center;"><i class="far fa-clock"></i>预计可供应至 <span id="gongying-date">--</span></div>
+                
+            </div>
+         <div style="flex:1; min-width: 140px; text-align: center; border-left: 1px solid #66bb6a; padding-left: 12px;">
+                <div><i class="fas fa-calendar-week"></i> 本周采摘目标: <strong id="benzhou-mubiao">-- kg</strong></div>
+                <div style="margin-top: 8px;">已完成: <span id="benzhou-wancheng">--</span> kg <span id="benzhou-bili" style="background:rgba(165, 214, 167, 0.6); padding:2px 8px; border-radius: 30px; border: 1px solid rgba(129, 199, 132, 0.3);">--%</span></div>
+                <div class="trend" style="justify-content: center;"><i class="fas fa-flag-checkered"></i> 剩余<span id="benzhou-shengyu">--</span>kg</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 桑园桑叶库存详细模块 -->
+    <div class="card" style="margin-bottom: 20px;">
+        <div class="card-header">
+            <h2><i class="fas fa-warehouse"></i> <span id="title-kucun">桑园桑叶库存详情</span></h2>
+            <div class="mock-btn">库存管理</div>
+        </div>
+        <div class="grid-overview" style="margin-bottom: 0;">
+            <div class="stat-card">
+                <div class="stat-title"><i class="fas fa-leaf"></i> <span id="kucun-xian-title">鲜桑叶库存</span></div>
+                <div class="stat-value"><span id="kucun-xian">--</span> <span class="stat-unit">kg</span></div>
+                <div class="trend" id="kucun-xian-trend"><i class="fas fa-temperature-low"></i> 加载中...</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title"><i class="fas fa-sun"></i> <span id="kucun-yuji-title">桑园预计库存</span></div>
+                <div class="stat-value"><span id="kucun-yuaji">--</span> <span class="stat-unit">吨</span></div>
+                <div class="trend" id="kucun-yuaji-trend"><i class="fas fa-droplet-slash"></i> 加载中...</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title"><i class="fas fa-clock"></i> <span id="kucun-zhou-title">平均周转天数</span></div>
+                <div class="stat-value"><span id="kucun-zhou">--</span> <span class="stat-unit">天</span></div>
+                <div class="trend" id="kucun-zhou-trend"><i class="fas fa-arrow-down"></i> 加载中...</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title"><i class="fas fa-exclamation-triangle"></i> <span id="kucun-yujing-title">库存预警</span></div>
+                <div class="stat-value" id="kucun-yujing" style="color: #d97706;">-- <span class="stat-unit"></span></div>
+                <div class="trend" id="kucun-yujing-trend"><i class="fas fa-check-circle"></i> 加载中...</div>
+            </div>
+        </div>
+        <div style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+            <div style="background: rgba(129, 199, 132, 0.15); padding: 16px; border-radius: 12px; border: 1px solid rgba(129, 199, 132, 0.25);" id="canshi-1-box">
+                <div style="font-weight: 600; color: #2c5a2a; margin-bottom: 8px;"><i class="fas fa-warehouse"></i> <span id="canshi-1-name">一号蚕室</span></div>
+                <div style="font-size: 1.8rem; font-weight: 700; color: #3e7930; text-align: center;" id="canshi-1-value">-- kg</div>
+                <div style="font-size: 0.85rem; color: #6b8c5c; margin-top: 4px; text-align: right;">
+                <i class="fas fa-chart-pie" style="margin-right: 2px;"></i>容量使用率: <span id="canshi-1-rate">--%</span></div>
+            </div>
+            
+            <div style="background: rgba(129, 199, 132, 0.15); padding: 16px; border-radius: 12px; border: 1px solid rgba(129, 199, 132, 0.25);" id="canshi-2-box">
+                <div style="font-weight: 600; color: #2c5a2a; margin-bottom: 8px;"><i class="fas fa-warehouse"></i> <span id="canshi-2-name">二号蚕室</span></div>
+                <div style="font-size: 1.8rem; font-weight: 700; color: #3e7930; text-align: center;" id="canshi-2-value">-- kg</div>
+                <div style="font-size: 0.85rem; color: #6b8c5c; margin-top: 4px; text-align: right;">
+                <i class="fas fa-chart-pie" style="margin-right: 2px;"></i>容量使用率: <span id="canshi-2-rate">--%</span></div>
+            </div>
+            <div style="background: rgba(129, 199, 132, 0.15); padding: 16px; border-radius: 12px; border: 1px solid rgba(129, 199, 132, 0.25);" id="canshi-3-box">
+                <div style="font-weight: 600; color: #2c5a2a; margin-bottom: 8px;"><i class="fas fa-box"></i> <span id="canshi-3-name">桑叶一库</span></div>
+                <div style="font-size: 1.8rem; font-weight: 700; color: #3e7930; text-align: center;" id="canshi-3-value">-- kg</div>
+                <div style="font-size: 0.85rem; color: #6b8c5c; margin-top: 4px; text-align: right;">
+                <i class="fas fa-chart-pie" style="margin-right: 2px;"></i> 容量使用率: <span id="canshi-3-rate">--%</span></div>
+            </div>
+            <div style="background: rgba(129, 199, 132, 0.15); padding: 16px; border-radius: 12px; border: 1px solid rgba(129, 199, 132, 0.25);" id="canshi-4-box">
+                <div style="font-weight: 600; color: #2c5a2a; margin-bottom: 8px;"><i class="fas fa-truck"></i> <span id="canshi-4-name">在途运输</span></div>
+                <div style="font-size: 1.8rem; font-weight: 700; color: #3e7930; text-align: center;" id="canshi-4-value">-- kg</div>
+                <div style="font-size: 0.85rem; color: #6b8c5c; margin-top: 4px; text-align: right;">
+                <i class="fas fa-truck" style="margin-right: 2px;"></i><span id="canshi-4-desc">预计今日16:00到达</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- <footer> -->
+    <!--     <i class="fas fa-star"></i> 贵州希田智慧农业科技有限公司 <br> -->
+    <!--     Guizhou Seetion Smart Agriculture Technology Co., Ltd. -->
+    <!-- </footer> -->
+    <footer>
+     <a href="https://seetion.cn/" target="_blank" style="margin-left:5px; color:inherit; text-decoration:none;">
+     <i class="fas fa-star" style="font-size:1em;"></i>
+     </a>
+     贵州希田智慧农业科技有限公司 <br>
+       Guizhou Seetion Smart Agriculture Technology Co., Ltd.
+     <a href="https://k.seetion.cn/sy-admin.html" target="_blank" id="footerTelegram" style="margin-left:5px; color:inherit; text-decoration:none;">
+     <i class="fa-brands fa-telegram" style="font-size:1.2em;"></i>
+     </a>
+</footer>
+</div>
+
+<script>
+    // 显示真实的当前日期，提升真实感 (无存储)
+    function updateDate() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        const weekday = weekdays[now.getDay()];
+        document.getElementById('currentDate').innerText = `${year}.${month}.${day} ${weekday}`;
+    }
+    updateDate();
+
+    // 为增加一点交互动感但没有实际存储，纯粹演示 UI 动态效果 (点击复选框仅仅改变图标视觉，不存储任何 localStorage)
+    // 这样避免建名过多，又能让用户感觉可点，但完全不影响数据持久化，属于临时视觉模拟。
+    const taskChecks = document.querySelectorAll('.task-check');
+    taskChecks.forEach(check => {
+        // 记录一下当前是否模拟“完成”状态，但不存储任何东西
+        check.style.cursor = 'pointer';
+        check.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const icon = check.querySelector('i');
+            if (icon.classList.contains('fa-square-check') || (icon.classList.contains('fa-check-square'))) {
+                // 当前为已完成样式 -> 切换为未完成
+                icon.classList.remove('fa-square-check', 'fa-check-square');
+                icon.classList.add('fa-square', 'far');
+                icon.style.color = '#9ebf89';
+            } else if (icon.classList.contains('fa-square')) {
+                // 未完成 -> 切换完成样式
+                icon.classList.remove('fa-square', 'far');
+                icon.classList.add('fa-square-check');
+                icon.style.color = '#77b35f';
+            }
+            // 附加轻提示效果 (无存储)
+            const parentTask = check.closest('.task-item');
+            if(parentTask) {
+                const titleSpan = parentTask.querySelector('.task-title');
+                if(titleSpan) {
+                    // 微秒级反馈，但不保存任何东西
+                    titleSpan.style.opacity = '0.7';
+                    setTimeout(() => { titleSpan.style.opacity = '1'; }, 150);
+                }
+            }
+        });
+    });
+
+    // 可选: 为“添任务”模拟按钮添加一个简单的alert，完全不涉及存储，让用户知道交互点
+    const addMockBtn = document.querySelector('.card-header .mock-btn');
+    if(addMockBtn) {
+        // 只针对第一个mock-btn做轻提示? 为了避免重复，我们选择所有mock-btn中加入轻提示"演示模式"
+        const allMockBtns = document.querySelectorAll('.mock-btn');
+        allMockBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                // 非存储纯提醒
+                const tempTip = document.createElement('div');
+                tempTip.innerText = '✨ 功能演示提示：此处为原型界面，待完整版可连接后端/数据库 ✨';
+                tempTip.style.position = 'fixed';
+                tempTip.style.bottom = '20px';
+                tempTip.style.left = '50%';
+                tempTip.style.transform = 'translateX(-50%)';
+                tempTip.style.backgroundColor = '#2c5a2a';
+                tempTip.style.color = 'white';
+                tempTip.style.padding = '8px 20px';
+                tempTip.style.borderRadius = '40px';
+                tempTip.style.fontSize = '0.8rem';
+                tempTip.style.zIndex = '999';
+                tempTip.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+                document.body.appendChild(tempTip);
+                setTimeout(() => {
+                    tempTip.style.opacity = '0';
+                    setTimeout(() => tempTip.remove(), 300);
+                }, 1800);
+            });
+        });
+    }
+
+    // 模拟简单悬浮微动 - 只是为了美观
+    const bars = document.querySelectorAll('.bar');
+    bars.forEach(bar => {
+        bar.addEventListener('mouseenter', () => {
+            bar.style.opacity = '0.85';
+        });
+        bar.addEventListener('mouseleave', () => {
+            bar.style.opacity = '1';
+        });
+    });
+</script>
+<script>
+    // ========== Supabase 云端数据加载 ==========
+    
+    // Supabase 配置
+    const SUPABASE_URL = 'https://adocbasiadgywqmrlftr.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_PxhWSpv_qz0KvwgiAIf6qg_YIe15DmT';
+    
+    // 初始化 Supabase 客户端
+    const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // 从云端加载所有数据
+    async function loadCloudData() {
+        try {
+            console.log('开始加载云端数据...');
+            const { data, error } = await sbClient
+                .from('syglkb')
+                .select('key, value');
+            
+            if (error) {
+                console.error('云端数据加载失败:', error);
+                return;
+            }
+            
+            // 将数据转换为键值对对象
+            const dataMap = {};
+            data.forEach(item => {
+                try {
+                    dataMap[item.key] = JSON.parse(item.value);
+                } catch (e) {
+                    dataMap[item.key] = item.value;
+                }
+            });
+            
+            // 更新各个模块的数据
+            updateStatCards(dataMap);
+            updateTasks(dataMap);
+            updateNongshiLog(dataMap);
+            updateCaijiPlan(dataMap);
+            updateKucunDetail(dataMap);
+            
+            // 加载站点设置（Logo URL + Telegram链接）
+            if (dataMap.site_settings) {
+                if (dataMap.site_settings.logo_url) {
+                    const logoImg = document.getElementById('mainLogo');
+                    if (logoImg) logoImg.src = dataMap.site_settings.logo_url;
+                }
+                if (dataMap.site_settings.telegram_url) {
+                    const tgLink = document.getElementById('footerTelegram');
+                    if (tgLink) tgLink.href = dataMap.site_settings.telegram_url;
+                }
+            }
+            
+            console.log('云端数据加载成功');
+        } catch (err) {
+            console.error('加载云端数据出错:', err);
+        }
+    }
+    
+    // 更新顶端四个统计卡片
+    function updateStatCards(data) {
+        // 桑树总数
+        if (data.syushu_zongshu) {
+            const d = data.syushu_zongshu;
+            document.getElementById('title-syushu').textContent = d.title || '桑树总数';
+            document.getElementById('value-syushu').textContent = d.value || '--';
+            document.getElementById('unit-syushu').textContent = d.unit || '株';
+            document.getElementById('trend-syushu').innerHTML = `<i class="fas fa-arrow-up"></i> ${d.trend || ''}`;
+        }
+        
+        // 今日采摘量
+        if (data.jinri_caijiliang) {
+            const d = data.jinri_caijiliang;
+            document.getElementById('title-caijiliang').textContent = d.title || '今日采摘量';
+            document.getElementById('value-caijiliang').textContent = d.value || '--';
+            document.getElementById('unit-caijiliang').textContent = d.unit || 'kg';
+            document.getElementById('trend-caijiliang').innerHTML = `<i class="fas fa-clock"></i> ${d.trend || ''}`;
+        }
+        
+        // 土壤湿度
+        if (data.turang_shidu) {
+            const d = data.turang_shidu;
+            document.getElementById('title-shidu').textContent = d.title || '土壤湿度';
+            document.getElementById('value-shidu').textContent = d.value || '--';
+            document.getElementById('unit-shidu').textContent = d.unit || '%';
+            document.getElementById('trend-shidu').innerHTML = `<i class="fas fa-water"></i> ${d.trend || ''}`;
+        }
+        
+        // 光照强度
+        if (data.guangzhao_qiangdu) {
+            const d = data.guangzhao_qiangdu;
+            document.getElementById('title-guangzhao').textContent = d.title || '光照强度';
+            document.getElementById('value-guangzhao').textContent = d.value || '--';
+            document.getElementById('unit-guangzhao').textContent = d.unit || 'klx';
+            document.getElementById('trend-guangzhao').innerHTML = `<i class="fas fa-check-circle"></i> ${d.trend || ''}`;
+        }
+    }
+    
+    // 更新近期农事任务
+    function updateTasks(data) {
+        // 更新标题
+        if (data.nongshi_title) {
+            document.getElementById('title-nongshi').textContent = data.nongshi_title.title || '近期农事任务';
+        }
+        
+        // 更新预警
+        if (data.nongshi_warning) {
+            document.getElementById('warning-text').textContent = data.nongshi_warning.text || '';
+        }
+        
+        // 更新任务列表
+        if (data.nongshi_tasks) {
+            const tasks = Array.isArray(data.nongshi_tasks) ? data.nongshi_tasks : [];
+            const taskList = document.getElementById('task-list');
+            taskList.innerHTML = '';
+            
+            tasks.forEach(task => {
+                const li = document.createElement('li');
+                li.className = 'task-item';
+                const isDone = task.done ? 'fa-square-check' : 'fa-square';
+                const priorityClass = task.priority === '高' ? 'priority-high' : '';
+                li.innerHTML = `
+                    <div class="task-info">
+                        <div class="task-check"><i class="fas ${isDone}" style="color:#77b35f;"></i></div>
+                        <span class="task-title">${task.title || ''}</span>
+                    </div>
+                    <div class="task-priority ${priorityClass}">${task.date || ''}</div>
+                `;
+                taskList.appendChild(li);
+            });
+            
+            // 重新绑定点击事件
+            bindTaskCheckEvents();
+        }
+    }
+
+    // 绑定任务点击事件（前端交互用）
+    function bindTaskCheckEvents() {
+        const taskChecks = document.querySelectorAll('.task-check');
+        taskChecks.forEach(check => {
+            check.style.cursor = 'pointer';
+            check.onclick = function(e) {
+                e.stopPropagation();
+                const icon = check.querySelector('i');
+                if (icon.classList.contains('fa-square-check')) {
+                    icon.classList.remove('fa-square-check');
+                    icon.classList.add('fa-square', 'far');
+                    icon.style.color = '#9ebf89';
+                } else if (icon.classList.contains('fa-square')) {
+                    icon.classList.remove('fa-square', 'far');
+                    icon.classList.add('fa-square-check');
+                    icon.style.color = '#77b35f';
+                }
+            };
+        });
+    }
+    
+    // 更新最近农事记录
+    function updateNongshiLog(data) {
+        console.log('nongshi_log data:', data.nongshi_log);
+        if (!data.nongshi_log) {
+            console.log('nongshi_log 不存在或为空');
+            return;
+        }
+        const d = data.nongshi_log;
+        // 更新标题
+        if (d.title) {
+            document.getElementById('title-nongshi-log').textContent = d.title;
+        }
+        // 更新记录列表
+        const logs = d.logs || [];
+        const logList = document.getElementById('nongshi-log-list');
+        logList.innerHTML = '';
+
+        if (logs.length === 0) {
+            logList.innerHTML = '<div class="log-entry"><div class="log-icon"><i class="fas fa-info-circle"></i></div><div class="log-detail"><div class="log-text">暂无记录</div><div class="log-time">--</div></div></div>';
+            return;
+        }
+
+        const icons = {
+            'tractor': 'fa-tractor',
+            'heart': 'fa-hand-holding-heart',
+            'charging': 'fa-charging-station',
+            'clipboard': 'fa-clipboard',
+            'leaf': 'fa-leaf',
+            'seedling': 'fa-seedling',
+            'truck': 'fa-truck',
+            'warehouse': 'fa-warehouse'
+        };
+
+        logs.forEach(log => {
+            const iconClass = icons[log.icon] || 'fa-clipboard';
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <div class="log-icon"><i class="fas ${iconClass}"></i></div>
+                <div class="log-detail">
+                    <div class="log-text">${log.text || ''}</div>
+                    <div class="log-time">${log.time || ''}</div>
+                </div>
+            `;
+            logList.appendChild(entry);
+        });
+    }
+    
+    // 更新采摘计划
+    function updateCaijiPlan(data) {
+        if (data.caiji_jihua) {
+            const d = data.caiji_jihua;
+            document.getElementById('title-caiji').textContent = d.title || '桑叶采摘计划 & 库存概览';
+            document.getElementById('jinri-jihua').textContent = (d.jinri_jihua || '--') + ' kg';
+            document.getElementById('jinri-wancheng').textContent = d.jinri_wancheng || '--';
+            document.getElementById('jinri-bili').textContent = d.jinri_bili || '--';
+            document.getElementById('jinri-shengyu').textContent = d.jinri_shengyu || '--';
+            
+            document.getElementById('kucun-dun').textContent = (d.kucun_dun || '--') + ' 吨';
+            document.getElementById('xianye-bei').textContent = d.xianye_bei || '--';
+            document.getElementById('gongying-date').textContent = d.gongying_date || '--';
+            
+            document.getElementById('benzhou-mubiao').textContent = (d.benzhou_mubiao || '--') + ' kg';
+            document.getElementById('benzhou-wancheng').textContent = d.benzhou_wancheng || '--';
+            document.getElementById('benzhou-bili').textContent = d.benzhou_bili || '--';
+            document.getElementById('benzhou-shengyu').textContent = d.benzhou_shengyu || '--';
+        }
+    }
+    
+    // 更新库存详情
+    function updateKucunDetail(data) {
+        if (data.kucun_xiangqing) {
+            const d = data.kucun_xiangqing;
+            
+            document.getElementById('title-kucun').textContent = d.title || '桑园桑叶库存详情';
+            document.getElementById('kucun-xian-title').textContent = d.xian_title || '鲜桑叶库存';
+            document.getElementById('kucun-xian').textContent = d.xian_value || '--';
+            document.getElementById('kucun-xian-trend').innerHTML = `<i class="fas fa-temperature-low"></i> ${d.xian_trend || ''}`;
+            
+            document.getElementById('kucun-yuji-title').textContent = d.yuji_title || '桑园预计库存';
+            document.getElementById('kucun-yuaji').textContent = d.yuji_value || '--';
+            document.getElementById('kucun-yuaji-trend').innerHTML = `<i class="fas fa-droplet-slash"></i> ${d.yuji_trend || ''}`;
+            
+            document.getElementById('kucun-zhou-title').textContent = d.zhou_title || '平均周转天数';
+            document.getElementById('kucun-zhou').textContent = d.zhou_value || '--';
+            document.getElementById('kucun-zhou-trend').innerHTML = `<i class="fas fa-arrow-down"></i> ${d.zhou_trend || ''}`;
+            
+            document.getElementById('kucun-yujing-title').textContent = d.yujing_title || '库存预警';
+            document.getElementById('kucun-yujing').innerHTML = `${d.yujing_value || '--'} <span class="stat-unit"></span>`;
+            document.getElementById('kucun-yujing-trend').innerHTML = `<i class="fas fa-check-circle"></i> ${d.yujing_trend || ''}`;
+        }
+        
+        // 更新四个仓库数据
+        if (data.kucun_cangku) {
+            const cangku = data.kucun_cangku;
+            for (let i = 1; i <= 4; i++) {
+                let c = cangku[i] || cangku[String(i)];
+                if (c) {
+                    const nameEl = document.getElementById(`canshi-${i}-name`);
+                    const valueEl = document.getElementById(`canshi-${i}-value`);
+                    const rateEl = document.getElementById(`canshi-${i}-rate`);
+                    const descEl = document.getElementById(`canshi-${i}-desc`);
+                    if (nameEl) nameEl.textContent = c.name || `--`;
+                    if (valueEl) valueEl.textContent = (c.value || '--') + ' kg';
+                    if (rateEl) rateEl.textContent = c.rate || '--';
+                    if (descEl && c.desc) descEl.textContent = c.desc;
+                }
+            }
+        }
+    }
+    
+    // 页面加载时自动获取云端数据
+    document.addEventListener('DOMContentLoaded', function() {
+        loadCloudData();
+        // 每5分钟自动刷新一次数据
+        setInterval(loadCloudData, 300000);
+    });
+</script>
+<script>
+    // 天气代码映射
+    const weatherCodes = {
+        0: { icon: '☀️', desc: '晴朗' },
+        1: { icon: '🌤️', desc: '少云' },
+        2: { icon: '⛅', desc: '多云' },
+        3: { icon: '☁️', desc: '阴天' },
+        45: { icon: '🌫️', desc: '雾' },
+        48: { icon: '🌫️', desc: '雾凇' },
+        51: { icon: '🌧️', desc: '小毛毛雨' },
+        53: { icon: '🌧️', desc: '中毛毛雨' },
+        55: { icon: '🌧️', desc: '大毛毛雨' },
+        56: { icon: '🌨️', desc: '冻雨(轻)' },
+        57: { icon: '🌨️', desc: '冻雨(重)' },
+        61: { icon: '🌧️', desc: '小雨' },
+        63: { icon: '🌧️', desc: '中雨' },
+        65: { icon: '🌧️', desc: '大雨' },
+        66: { icon: '🌨️', desc: '冻雨(轻)' },
+        67: { icon: '🌨️', desc: '冻雨(重)' },
+        71: { icon: '❄️', desc: '小雪' },
+        73: { icon: '❄️', desc: '中雪' },
+        75: { icon: '❄️', desc: '大雪' },
+        77: { icon: '🌨️', desc: '雪粒' },
+        80: { icon: '🌦️', desc: '阵雨(小)' },
+        81: { icon: '🌦️', desc: '阵雨(中)' },
+        82: { icon: '🌦️', desc: '阵雨(大)' },
+        85: { icon: '🌨️', desc: '阵雪(小)' },
+        86: { icon: '🌨️', desc: '阵雪(大)' },
+        95: { icon: '⛈️', desc: '雷暴' },
+        96: { icon: '⛈️', desc: '雷暴冰雹' },
+        99: { icon: '⛈️', desc: '雷暴冰雹' }
+    };
+
+    // 获取天气数据
+    async function fetchWeather() {
+        const apiUrl = 'https://api.open-meteo.com/v1/forecast?latitude=25.4598&longitude=107.6525&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia/Shanghai';
+        
+        try {
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+            
+            const temperature = data.current.temperature_2m;
+            const humidity = data.current.relative_humidity_2m;
+            const weatherCode = data.current.weather_code;
+            
+            // 更新气温
+            document.getElementById('temperature').textContent = temperature + '°C';
+            
+            // 更新湿度
+            document.getElementById('humidity').textContent = humidity + '%';
+            
+            // 更新天气状态
+            const weatherInfo = weatherCodes[parseInt(weatherCode)] || { icon: '☁️', desc: '未知' };
+            const weatherIcon = document.getElementById('weather-icon');
+            const weatherDesc = document.getElementById('weather-desc');
+            
+            weatherIcon.textContent = weatherInfo.icon;
+            weatherDesc.textContent = weatherInfo.desc;
+            
+        } catch (error) {
+            console.error('获取天气数据失败:', error);
+            document.getElementById('temperature').textContent = '数据获取失败';
+            document.getElementById('humidity').textContent = '数据获取失败';
+            document.getElementById('weather-desc').textContent = '获取失败';
+        }
+    }
+
+    // 页面加载时获取天气数据
+    fetchWeather();
+
+    // 绑定刷新按钮
+    document.getElementById('weather-refresh').addEventListener('click', function() {
+        this.classList.add('fa-spin');
+        fetchWeather().finally(() => {
+            this.classList.remove('fa-spin');
+        });
+    });
+</script>
+</body>
+</html>

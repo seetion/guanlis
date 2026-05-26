@@ -1,0 +1,1773 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据管理后台 - 贵州希田</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --sidebar-width: 240px;
+            --sidebar-bg: #1a2332;
+            --sidebar-hover: #1f2d3d;
+            --sidebar-active: #243447;
+            --sidebar-text: #b0bec5;
+            --sidebar-text-active: #ffffff;
+            --accent: #4c9a2a;
+            --accent-light: #66bb6a;
+            --page-bg: #f0f4f0;
+            --card-bg: #ffffff;
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --border: #e8f0e8;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--page-bg);
+            color: var(--text-primary);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ========== 左侧导航栏 ========== */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--sidebar-bg);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            z-index: 100;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-brand {
+            padding: 24px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sidebar-brand img {
+            width: 40px; height: 40px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+        .sidebar-brand .brand-icon {
+            font-size: 1.8rem;
+            color: var(--accent-light);
+            animation: pulse-glow 2s ease-in-out infinite;
+            display: none;
+        }
+        .sidebar-brand .brand-icon.fallback {
+            display: block;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 1; text-shadow: 0 0 8px rgba(102,187,106,0.4); }
+            50% { opacity: 0.8; text-shadow: 0 0 20px rgba(102,187,106,0.7); }
+        }
+
+        .sidebar-brand .brand-text h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.3px;
+        }
+
+        .sidebar-brand .brand-text span {
+            font-size: 0.72rem;
+            color: var(--sidebar-text);
+            opacity: 0.8;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 12px 0;
+            overflow-y: auto;
+        }
+
+        .nav-section-title {
+            padding: 16px 20px 8px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: rgba(176, 190, 197, 0.5);
+            font-weight: 600;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            margin: 2px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            color: var(--sidebar-text);
+            font-size: 0.88rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            position: relative;
+        }
+
+        .nav-item:hover {
+            background: var(--sidebar-hover);
+            color: #fff;
+        }
+
+        .nav-item.active {
+            background: var(--sidebar-active);
+            color: var(--sidebar-text-active);
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 24px;
+            background: var(--accent-light);
+            border-radius: 0 3px 3px 0;
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--accent);
+            color: #fff;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .sidebar-footer {
+            padding: 16px 20px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            font-size: 0.72rem;
+            color: rgba(176, 190, 197, 0.5);
+            text-align: center;
+        }
+
+        .sidebar-mobile-toggle {
+            display: none;
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 200;
+            background: var(--sidebar-bg);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        /* ========== 右侧主内容区 ========== */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 0;
+            min-height: 100vh;
+            transition: margin-left 0.3s ease;
+        }
+
+        .top-bar {
+            background: #fff;
+            padding: 16px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .top-bar .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .top-bar .breadcrumb .current {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .top-bar-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .sync-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            background: #f8faf8;
+            padding: 8px 14px;
+            border-radius: 30px;
+            border: 1px solid var(--border);
+        }
+
+        .sync-indicator .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--accent-light);
+            animation: pulse-dot 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .content-wrapper {
+            padding: 28px;
+        }
+
+        /* ========== 内容区卡片 ========== */
+        .section {
+            display: none;
+            animation: fadeSlideIn 0.35s ease;
+        }
+        .section.active { display: block; }
+
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .page-header {
+            margin-bottom: 24px;
+        }
+        .page-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .page-header h2 i { color: var(--accent); }
+        .page-header p {
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+            margin-top: 6px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.03);
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06), 0 0 0 1px rgba(76,154,42,0.1);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 2px solid var(--border);
+        }
+        .card-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-header h3 i { color: var(--accent); }
+
+        /* ========== 概览统计卡片 ========== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-mini-card {
+            background: #fff;
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.03);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .stat-mini-card .stat-icon {
+            width: 48px; height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+        }
+        .stat-mini-card .stat-icon.green { background: #e8f5e9; color: #4c9a2a; }
+        .stat-mini-card .stat-icon.blue { background: #e3f2fd; color: #1976d2; }
+        .stat-mini-card .stat-icon.amber { background: #fff8e1; color: #f57f17; }
+        .stat-mini-card .stat-icon.purple { background: #f3e5f5; color: #7b1fa2; }
+        .stat-mini-card .stat-info .stat-num {
+            font-size: 1.5rem; font-weight: 700;
+        }
+        .stat-mini-card .stat-info .stat-label {
+            font-size: 0.78rem; color: var(--text-secondary);
+        }
+
+        /* ========== 表单 ========== */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+        }
+        .form-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+        .form-grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+        .form-group {
+            margin-bottom: 0;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            color: #556b3f;
+            margin-bottom: 6px;
+            font-size: 0.82rem;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid #dce5d8;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            background: #fafcfa;
+            transition: all 0.2s ease;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #66bb6a;
+            box-shadow: 0 0 0 3px rgba(102,187,106,0.12);
+            background: #fff;
+        }
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        /* ========== 按钮 ========== */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: inherit;
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #3d7d22;
+            box-shadow: 0 4px 14px rgba(76,154,42,0.3);
+            transform: translateY(-1px);
+        }
+        .btn-secondary {
+            background: #6b8c5c;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #5a7a4d;
+            box-shadow: 0 4px 12px rgba(107,140,92,0.3);
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1.5px solid #dce5d8;
+            color: var(--text-primary);
+        }
+        .btn-outline:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: #f8fdf8;
+        }
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c0392b;
+            box-shadow: 0 4px 12px rgba(231,76,60,0.3);
+        }
+        .btn-small {
+            padding: 6px 14px;
+            font-size: 0.8rem;
+        }
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        /* ========== 状态提示 ========== */
+        .status {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 16px;
+            display: none;
+            font-size: 0.88rem;
+        }
+        .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: block; }
+        .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; display: block; }
+        .status.info { background: #cce5ff; color: #004085; border: 1px solid #b8daff; display: block; }
+
+        /* ========== 表格 ========== */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+            font-size: 0.88rem;
+        }
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        th {
+            background: #f8fcf7;
+            font-weight: 600;
+            color: #2c5a2a;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        tr:hover { background: #fafdf8; }
+
+        /* ========== 动态列表编辑项 ========== */
+        .task-item-row, .log-item-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            background: #f8fcf7;
+            border-radius: 8px;
+            border: 1px solid #e8f0e3;
+            margin-bottom: 8px;
+            transition: all 0.2s ease;
+        }
+        .task-item-row:hover, .log-item-row:hover {
+            border-color: #c8e0c0;
+            box-shadow: 0 2px 6px rgba(76,154,42,0.06);
+        }
+        .task-item-row input, .log-item-row input, .task-item-row select, .log-item-row select {
+            padding: 8px 10px;
+            border: 1.5px solid #dce5d8;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            background: #fff;
+            font-family: inherit;
+        }
+        .task-item-row input:focus, .log-item-row input:focus, .task-item-row select:focus {
+            outline: none;
+            border-color: var(--accent-light);
+            box-shadow: 0 0 0 2px rgba(102,187,106,0.1);
+        }
+
+        /* ========== 登录遮盖层样式 ========== */
+        .login-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .login-box {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 40px;
+            width: 400px;
+            max-width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .login-box h2 { color: #2c5a2a; margin-bottom: 30px; font-size: 1.8rem; }
+        .login-box .form-group { text-align: left; margin-bottom: 16px; }
+        .login-box input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #c8e6c9;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        .login-box input:focus {
+            outline: none;
+            border-color: #66bb6a;
+            box-shadow: 0 0 0 3px rgba(102,187,106,0.2);
+        }
+        .login-box .btn { width: 100%; padding: 14px; font-size: 1.1rem; margin-top: 10px; }
+        .login-error { color: #dc3545; font-size: 0.9rem; margin-top: 10px; display: none; }
+        .login-icon { font-size: 4rem; color: #4c9a2a; margin-bottom: 20px; }
+
+        /* 验证码弹窗 */
+        .verify-modal {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            justify-content: center; align-items: center;
+            z-index: 10000;
+        }
+        .verify-modal.show { display: flex; }
+        .verify-box {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            width: 350px;
+            max-width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .verify-box h3 { color: #2c5a2a; margin-bottom: 20px; }
+        .verify-box input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #c8e6c9;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+        .verify-box input:focus { outline: none; border-color: #66bb6a; }
+        .verify-hint { color: #666; font-size: 0.85rem; margin-bottom: 15px; }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 14px 24px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            font-size: 0.9rem;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.success { background: #28a745; }
+        .toast.error { background: #dc3545; }
+
+        /* 响应式 */
+        @media (max-width: 1024px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .form-grid-4 { grid-template-columns: repeat(2, 1fr); }
+            .form-grid-3 { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .sidebar-mobile-toggle {
+                display: block;
+            }
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 99;
+            }
+            .sidebar-overlay.show { display: block; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .form-grid, .form-grid-3, .form-grid-4 { grid-template-columns: 1fr; }
+            .content-wrapper { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 登录遮盖层 -->
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-box">
+            <div class="login-icon"><i class="fas fa-user-lock"></i></div>
+            <h2>后台管理登录</h2>
+            <div class="form-group">
+                <label>用户名</label>
+                <input type="text" id="loginUsername" placeholder="请输入用户名">
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <input type="password" id="loginPassword" placeholder="请输入密码">
+            </div>
+            <button class="btn btn-primary" onclick="checkLogin()">
+                <i class="fas fa-sign-in-alt"></i> 进入后台管理
+            </button>
+            <div class="login-error" id="loginError">用户名或密码错误</div>
+        </div>
+    </div>
+
+    <!-- 验证码弹窗 -->
+    <div class="verify-modal" id="verifyModal">
+        <div class="verify-box">
+            <h3><i class="fas fa-shield-alt"></i> 安全验证</h3>
+            <p class="verify-hint">请输入验证码以继续</p>
+            <input type="text" id="verifyCode" placeholder="请输入验证码" maxlength="20">
+            <button class="btn btn-primary" onclick="checkVerify()">
+                <i class="fas fa-check"></i> 确认
+            </button>
+            <div class="login-error" id="verifyError">验证码错误</div>
+        </div>
+    </div>
+
+    <!-- 侧边栏遮罩 -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <!-- 左侧导航栏 -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <img id="adminLogo" src="" alt="Logo" onerror="this.style.display='none';this.nextElementSibling.classList.add('fallback');" style="display:none;">
+            <i class="fas fa-leaf brand-icon fallback" id="adminLogoFallback"></i>
+            <div class="brand-text">
+                <h3>贵州希田</h3>
+                <span>智慧农业管理后台</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">数据管理</div>
+            <a class="nav-item active" data-section="dashboard" onclick="switchSection('dashboard', this)">
+                <i class="fas fa-th-large"></i> 数据概览
+            </a>
+            <a class="nav-item" data-section="stats" onclick="switchSection('stats', this)">
+                <i class="fas fa-chart-bar"></i> 统计指标
+            </a>
+            <a class="nav-item" data-section="farming" onclick="switchSection('farming', this)">
+                <i class="fas fa-tasks"></i> 农事管理
+                <span class="nav-badge" id="taskCount">0</span>
+            </a>
+            <div class="nav-section-title">运营管理</div>
+            <a class="nav-item" data-section="harvest" onclick="switchSection('harvest', this)">
+                <i class="fas fa-calendar-check"></i> 采摘计划
+            </a>
+            <a class="nav-item" data-section="inventory" onclick="switchSection('inventory', this)">
+                <i class="fas fa-warehouse"></i> 库存详情
+            </a>
+            <div class="nav-section-title">系统工具</div>
+            <a class="nav-item" data-section="settings" onclick="switchSection('settings', this)">
+                <i class="fas fa-cog"></i> 站点设置
+            </a>
+            <a class="nav-item" data-section="clouddata" onclick="switchSection('clouddata', this)">
+                <i class="fas fa-database"></i> 云端数据
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <i class="fas fa-server"></i> Supabase 已连接
+        </div>
+    </aside>
+
+    <!-- 移动端菜单按钮 -->
+    <button class="sidebar-mobile-toggle" id="mobileToggle" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- 右侧主内容 -->
+    <div class="main-content" id="mainContent">
+        <!-- 顶部栏 -->
+        <div class="top-bar">
+            <div class="breadcrumb">
+                <i class="fas fa-home"></i>
+                <span>/</span>
+                <span class="current" id="breadcrumbTitle">数据概览</span>
+            </div>
+            <div class="top-bar-actions">
+                <div class="sync-indicator">
+                    <span class="dot"></span>
+                    <span id="syncStatus">Supabase 在线</span>
+                </div>
+                <button class="btn btn-outline btn-small" onclick="loadCurrentData()">
+                    <i class="fas fa-sync-alt"></i> 刷新
+                </button>
+            </div>
+        </div>
+
+        <div class="content-wrapper">
+
+            <!-- ===== 数据概览 ===== -->
+            <section class="section active" id="section-dashboard">
+                <div class="page-header">
+                    <h2><i class="fas fa-th-large"></i> 数据概览</h2>
+                    <p>桑园核心数据一览，点击侧边栏进入详细编辑</p>
+                </div>
+                <div class="stats-grid" id="overviewStats">
+                    <div class="stat-mini-card">
+                        <div class="stat-icon green"><i class="fas fa-tree"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-num" id="ov-syushu">--</div>
+                            <div class="stat-label" id="ov-syushu-unit">桑树总数</div>
+                        </div>
+                    </div>
+                    <div class="stat-mini-card">
+                        <div class="stat-icon blue"><i class="fas fa-leaf"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-num" id="ov-caijiliang">--</div>
+                            <div class="stat-label">今日采摘量 (kg)</div>
+                        </div>
+                    </div>
+                    <div class="stat-mini-card">
+                        <div class="stat-icon amber"><i class="fas fa-tachometer-alt"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-num" id="ov-shidu">--</div>
+                            <div class="stat-label">土壤湿度 (%)</div>
+                        </div>
+                    </div>
+                    <div class="stat-mini-card">
+                        <div class="stat-icon purple"><i class="fas fa-sun"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-num" id="ov-guangzhao">--</div>
+                            <div class="stat-label">光照强度 (klx)</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-info-circle"></i> 系统状态</h3>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; font-size: 0.9rem; color: var(--text-secondary);">
+                        <div><strong>数据表：</strong> syglkb</div>
+                        <div><strong>数据库：</strong> Supabase PostgreSQL</div>
+                        <div><strong>API状态：</strong> <span style="color: #4c9a2a;">● 在线</span></div>
+                        <div><strong>最后同步：</strong> <span id="lastSync">页面加载时</span></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== 统计指标编辑 ===== -->
+            <section class="section" id="section-stats">
+                <div class="page-header">
+                    <h2><i class="fas fa-chart-bar"></i> 统计指标编辑</h2>
+                    <p>编辑前端四个关键统计卡片的显示数据</p>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-tree"></i> 桑树总数</h3>
+                    </div>
+                    <div class="form-grid-4">
+                        <div class="form-group">
+                            <label>标题</label>
+                            <input type="text" id="syushu_title" placeholder="如: 桑树总数">
+                        </div>
+                        <div class="form-group">
+                            <label>数值</label>
+                            <input type="text" id="syushu_value" placeholder="如: 2486">
+                        </div>
+                        <div class="form-group">
+                            <label>单位</label>
+                            <input type="text" id="syushu_unit" placeholder="如: 株">
+                        </div>
+                        <div class="form-group">
+                            <label>趋势</label>
+                            <input type="text" id="syushu_trend" placeholder="如: 较去年 +12.4%">
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-leaf"></i> 今日采摘量</h3>
+                    </div>
+                    <div class="form-grid-3">
+                        <div class="form-group">
+                            <label>标题</label>
+                            <input type="text" id="caijiliang_title" placeholder="如: 今日采摘量">
+                        </div>
+                        <div class="form-group">
+                            <label>数值</label>
+                            <input type="text" id="caijiliang_value" placeholder="如: 342">
+                        </div>
+                        <div class="form-group">
+                            <label>趋势</label>
+                            <input type="text" id="caijiliang_trend" placeholder="如: 预计全天 560kg">
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-tachometer-alt"></i> 土壤湿度 & 光照强度</h3>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>土壤湿度 - 数值</label>
+                            <input type="text" id="shidu_value" placeholder="如: 68">
+                        </div>
+                        <div class="form-group">
+                            <label>土壤湿度 - 趋势</label>
+                            <input type="text" id="shidu_trend" placeholder="如: 适宜范围 (55%-75%)">
+                        </div>
+                        <div class="form-group">
+                            <label>光照强度 - 数值</label>
+                            <input type="text" id="guangzhao_value" placeholder="如: 32.5">
+                        </div>
+                        <div class="form-group">
+                            <label>光照强度 - 趋势</label>
+                            <input type="text" id="guangzhao_trend" placeholder="如: 光合有效">
+                        </div>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="saveQuickEdit('stat')">
+                        <i class="fas fa-save"></i> 保存统计数据
+                    </button>
+                    <button class="btn btn-secondary" onclick="loadCurrentData()">
+                        <i class="fas fa-download"></i> 从云端加载
+                    </button>
+                </div>
+                <div id="stat-status" class="status"></div>
+            </section>
+
+            <!-- ===== 农事管理 ===== -->
+            <section class="section" id="section-farming">
+                <div class="page-header">
+                    <h2><i class="fas fa-tasks"></i> 农事管理</h2>
+                    <p>管理近期农事任务和操作记录</p>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-clipboard-list"></i> 近期农事任务</h3>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>任务标题</label>
+                            <input type="text" id="nongshi_title" placeholder="如: 近期农事任务">
+                        </div>
+                        <div class="form-group">
+                            <label>预警信息</label>
+                            <input type="text" id="nongshi_warning" placeholder="如: 即将有连续阴雨，建议提前排水">
+                        </div>
+                    </div>
+                    <h4 style="color: #456b38; font-size: 0.9rem; margin: 16px 0 10px;">任务列表</h4>
+                    <div id="task-list-editor" style="display: flex; flex-direction: column;"></div>
+                    <button class="btn btn-outline btn-small" onclick="addTaskItem()" style="margin-top: 8px;">
+                        <i class="fas fa-plus"></i> 添加任务
+                    </button>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="saveQuickEdit('nongshi')">
+                            <i class="fas fa-save"></i> 保存任务数据
+                        </button>
+                    </div>
+                    <div id="nongshi-status" class="status"></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-history"></i> 最近农事记录</h3>
+                    </div>
+                    <div id="log-list-editor" style="display: flex; flex-direction: column;"></div>
+                    <button class="btn btn-outline btn-small" onclick="addLogItem()" style="margin-top: 8px;">
+                        <i class="fas fa-plus"></i> 添加记录
+                    </button>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="saveQuickEdit('nongshilog')">
+                            <i class="fas fa-save"></i> 保存记录数据
+                        </button>
+                    </div>
+                    <div id="nongshilog-status" class="status"></div>
+                </div>
+            </section>
+
+            <!-- ===== 采摘计划 ===== -->
+            <section class="section" id="section-harvest">
+                <div class="page-header">
+                    <h2><i class="fas fa-calendar-check"></i> 桑叶采摘计划</h2>
+                    <p>管理采摘计划和库存概览数据</p>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-calendar-day"></i> 今日采摘</h3>
+                    </div>
+                    <div class="form-grid-4">
+                        <div class="form-group">
+                            <label>今日计划采摘 (kg)</label>
+                            <input type="text" id="jinri_jihua" placeholder="如: 480">
+                        </div>
+                        <div class="form-group">
+                            <label>今日已完成 (kg)</label>
+                            <input type="text" id="jinri_wancheng" placeholder="如: 342">
+                        </div>
+                        <div class="form-group">
+                            <label>今日完成比例</label>
+                            <input type="text" id="jinri_bili" placeholder="如: 71%">
+                        </div>
+                        <div class="form-group">
+                            <label>今日剩余 (kg)</label>
+                            <input type="text" id="jinri_shengyu" placeholder="如: 138">
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-chart-line"></i> 库存与本周计划</h3>
+                    </div>
+                    <div class="form-grid-3">
+                        <div class="form-group">
+                            <label>桑园库存 (吨)</label>
+                            <input type="text" id="kucun_dun" placeholder="如: 91.2">
+                        </div>
+                        <div class="form-group">
+                            <label>现鲜叶储备 (kg)</label>
+                            <input type="text" id="xianye_bei" placeholder="如: 680">
+                        </div>
+                        <div class="form-group">
+                            <label>预计供应日期</label>
+                            <input type="text" id="gongying_date" placeholder="如: 5月22日">
+                        </div>
+                        <div class="form-group">
+                            <label>本周目标 (kg)</label>
+                            <input type="text" id="benzhou_mubiao" placeholder="如: 1480">
+                        </div>
+                        <div class="form-group">
+                            <label>本周已完成 (kg)</label>
+                            <input type="text" id="benzhou_wancheng" placeholder="如: 500">
+                        </div>
+                        <div class="form-group">
+                            <label>本周完成比例</label>
+                            <input type="text" id="benzhou_bili" placeholder="如: 31.1%">
+                        </div>
+                        <div class="form-group">
+                            <label>本周剩余 (kg)</label>
+                            <input type="text" id="benzhou_shengyu" placeholder="如: 980">
+                        </div>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="saveQuickEdit('caiji')">
+                        <i class="fas fa-save"></i> 保存采摘计划
+                    </button>
+                </div>
+                <div id="caiji-status" class="status"></div>
+            </section>
+
+            <!-- ===== 库存详情 ===== -->
+            <section class="section" id="section-inventory">
+                <div class="page-header">
+                    <h2><i class="fas fa-warehouse"></i> 桑园桑叶库存详情</h2>
+                    <p>管理详细库存数据和仓库信息</p>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-boxes"></i> 库存指标</h3>
+                    </div>
+                    <div class="form-grid-4">
+                        <div class="form-group">
+                            <label>鲜桑叶库存 (kg)</label>
+                            <input type="text" id="kucun_xian" placeholder="如: 2400">
+                        </div>
+                        <div class="form-group">
+                            <label>鲜桑叶说明</label>
+                            <input type="text" id="kucun_xian_trend" placeholder="如: 2-4°C 冷藏保存">
+                        </div>
+                        <div class="form-group">
+                            <label>桑园预计库存 (吨)</label>
+                            <input type="text" id="kucun_yuji" placeholder="如: 375">
+                        </div>
+                        <div class="form-group">
+                            <label>预计库存说明</label>
+                            <input type="text" id="kucun_yuji_trend" placeholder="如: 桑园数据AI预计">
+                        </div>
+                        <div class="form-group">
+                            <label>平均周转天数</label>
+                            <input type="text" id="kucun_zhou" placeholder="如: 4.5">
+                        </div>
+                        <div class="form-group">
+                            <label>周转说明</label>
+                            <input type="text" id="kucun_zhou_trend" placeholder="如: 较上月减少0.8天">
+                        </div>
+                        <div class="form-group">
+                            <label>库存预警状态</label>
+                            <input type="text" id="kucun_yujing" placeholder="如: 正常">
+                        </div>
+                        <div class="form-group">
+                            <label>预警说明</label>
+                            <input type="text" id="kucun_yujing_trend" placeholder="如: 安全库存线以上">
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-code"></i> 仓库数据 (JSON格式)</h3>
+                    </div>
+                    <div class="form-group">
+                        <textarea id="kucun_cangku" rows="8" placeholder='{"1":{"name":"一号蚕室","value":"1200","rate":"55%","desc":"--"},"2":{"name":"二号蚕室","value":"1200","rate":"65%"},"3":{"name":"桑叶一库","value":"680","rate":"85%"},"4":{"name":"在途运输","value":"350","desc":"预计今日16:00到达"}}'></textarea>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="saveQuickEdit('kucun')">
+                        <i class="fas fa-save"></i> 保存库存详情
+                    </button>
+                </div>
+                <div id="kucun-status" class="status"></div>
+            </section>
+
+            <!-- ===== 站点设置 ===== -->
+            <section class="section" id="section-settings">
+                <div class="page-header">
+                    <h2><i class="fas fa-cog"></i> 站点设置</h2>
+                    <p>修改全局站点配置，一处修改，主页和管理后台同步生效</p>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-image"></i> Logo 设置</h3>
+                    </div>
+                    <div class="form-group" style="max-width: 600px;">
+                        <label>Logo 图片 URL</label>
+                        <div style="display: flex; gap: 12px;">
+                            <input type="text" id="site_logo_url" placeholder="例如: https://example.com/logo.png" style="flex: 1;" oninput="previewLogo()">
+                            <button class="btn btn-outline btn-small" onclick="previewLogo()">
+                                <i class="fas fa-eye"></i> 预览
+                            </button>
+                        </div>
+                    </div>
+                    <div style="margin-top: 16px; padding: 16px; background: #f8faf8; border-radius: 10px; border: 1px dashed #dce5d8; text-align: center;">
+                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px;">Logo 预览</div>
+                        <img id="logoPreview" src="" alt="Logo预览" style="max-width: 120px; max-height: 80px; border-radius: 8px; object-fit: contain;" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%2280%22><rect fill=%22%23e8f0e8%22 width=%22120%22 height=%2280%22 rx=%228%22/><text x=%2260%22 y=%2245%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2212%22>暂无预览</text></svg>'">
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-info-circle"></i> 使用说明</h3>
+                    </div>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.8;">
+                        <i class="fas fa-check-circle" style="color: var(--accent);"></i> 修改此处的 Logo URL 后，主页和管理后台左侧的 Logo 会同步更新。<br>
+                        <i class="fas fa-check-circle" style="color: var(--accent);"></i> 推荐使用正方形图片 (建议 200x200 以上)，支持 PNG/JPG/WebP 格式。<br>
+                        <i class="fas fa-check-circle" style="color: var(--accent);"></i> 当前生效 Logo：
+                        <span id="currentLogoUrl" style="color: var(--accent); word-break: break-all;">未设置</span>
+                    </p>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-shield-alt"></i> 安全设置</h3>
+                    </div>
+                    <div class="form-group" style="max-width: 400px;">
+                        <label>登录验证码（第二步验证使用）</label>
+                        <input type="text" id="site_verify_code" placeholder="留空则使用默认码 wq533520">
+                    </div>
+                    <p style="color: var(--text-secondary); font-size: 0.83rem; margin-top: 8px;">
+                        <i class="fas fa-lightbulb" style="color: var(--warning);"></i> 修改后保存即可生效，下次登录时使用新验证码
+                    </p>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-link"></i> 页脚链接</h3>
+                    </div>
+                    <div class="form-group" style="max-width: 600px;">
+                        <label>Telegram 图标链接（主页底部右侧图标）</label>
+                        <input type="text" id="site_telegram_url" placeholder="例如: https://k.seetion.cn/sy-admin.html">
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="saveSiteSettings()">
+                        <i class="fas fa-save"></i> 保存设置
+                    </button>
+                </div>
+                <div id="settings-status" class="status"></div>
+            </section>
+
+            <!-- ===== 云端数据 ===== -->
+            <section class="section" id="section-clouddata">
+                <div class="page-header">
+                    <h2><i class="fas fa-database"></i> 云端数据管理</h2>
+                    <p>查看和管理 Supabase 云端存储的所有数据</p>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-table"></i> 数据列表</h3>
+                        <div>
+                            <button class="btn btn-secondary btn-small" onclick="loadAllData()">
+                                <i class="fas fa-list"></i> 查看所有数据
+                            </button>
+                            <button class="btn btn-outline btn-small" onclick="refreshData()" style="margin-left: 8px;">
+                                <i class="fas fa-sync-alt"></i> 刷新列表
+                            </button>
+                        </div>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Key</th>
+                                    <th>Value</th>
+                                    <th style="width: 100px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="data-table">
+                                <tr><td colspan="3" style="text-align: center; color: #999; padding: 32px;">点击"查看所有数据"加载数据</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+        </div><!-- /content-wrapper -->
+    </div><!-- /main-content -->
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // ========== 侧边栏导航切换 ==========
+        function switchSection(sectionId, navItem) {
+            // 隐藏所有 section
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            // 显示目标 section
+            const target = document.getElementById('section-' + sectionId);
+            if (target) target.classList.add('active');
+
+            // 更新导航高亮
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            if (navItem) navItem.classList.add('active');
+
+            // 更新面包屑
+            const titles = {
+                'dashboard': '数据概览',
+                'stats': '统计指标',
+                'farming': '农事管理',
+                'harvest': '采摘计划',
+                'inventory': '库存详情',
+                'settings': '站点设置',
+                'clouddata': '云端数据'
+            };
+            document.getElementById('breadcrumbTitle').textContent = titles[sectionId] || sectionId;
+
+            // 移动端关闭侧边栏
+            if (window.innerWidth <= 768) {
+                closeSidebar();
+            }
+
+            // 切换到概览时刷新概览数据
+            if (sectionId === 'dashboard') refreshOverview();
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('show');
+        }
+
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('show');
+        }
+
+        // ========== 概览数据刷新 ==========
+        function refreshOverview() {
+            // 直接读取当前表单中的数据来更新概览
+            document.getElementById('ov-syushu').textContent = document.getElementById('syushu_value').value || '--';
+            document.getElementById('ov-syushu-unit').textContent = (document.getElementById('syushu_title').value || '桑树总数') + ' (' + (document.getElementById('syushu_unit').value || '株') + ')';
+            document.getElementById('ov-caijiliang').textContent = document.getElementById('caijiliang_value').value || '--';
+            document.getElementById('ov-shidu').textContent = document.getElementById('shidu_value').value || '--';
+            document.getElementById('ov-guangzhao').textContent = document.getElementById('guangzhao_value').value || '--';
+
+            // 更新任务计数
+            const taskRows = document.querySelectorAll('#task-list-editor .task-item-row');
+            document.getElementById('taskCount').textContent = taskRows.length;
+        }
+
+        // ========== Supabase 配置 ==========
+        const SUPABASE_URL = 'https://adocbasiadgywqmrlftr.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_PxhWSpv_qz0KvwgiAIf6qg_YIe15DmT';
+        const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // 全局验证码变量（默认兜底值，登录时从云端更新）
+        let currentVerifyCode = 'wq533520';
+
+        // ========== Toast 提示 ==========
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => { toast.classList.remove('show'); }, 3000);
+        }
+
+        function showStatus(id, message, type) {
+            const status = document.getElementById(id);
+            status.textContent = message;
+            status.className = `status ${type}`;
+            setTimeout(() => { status.style.display = 'none'; }, 5000);
+        }
+
+        // ========== 站点设置 / Logo 管理 ==========
+        function previewLogo() {
+            const url = document.getElementById('site_logo_url').value.trim();
+            const preview = document.getElementById('logoPreview');
+            const currentText = document.getElementById('currentLogoUrl');
+            if (url) {
+                preview.src = url;
+                currentText.textContent = url;
+            } else {
+                preview.src = '';
+                currentText.textContent = '未设置';
+            }
+        }
+
+        function applyLogo(url) {
+            // 应用到管理后台侧栏
+            const adminLogoImg = document.getElementById('adminLogo');
+            const adminLogoFallback = document.getElementById('adminLogoFallback');
+            if (url) {
+                adminLogoImg.src = url;
+                adminLogoImg.style.display = 'block';
+                adminLogoFallback.classList.remove('fallback');
+            } else {
+                adminLogoImg.style.display = 'none';
+                adminLogoFallback.classList.add('fallback');
+            }
+            // 更新当前 URL 显示
+            const currentText = document.getElementById('currentLogoUrl');
+            if (currentText) currentText.textContent = url || '未设置';
+            // 同步到设置输入框
+            const urlInput = document.getElementById('site_logo_url');
+            if (urlInput && urlInput.value !== url) urlInput.value = url || '';
+            // 同步预览
+            const preview = document.getElementById('logoPreview');
+            if (preview) preview.src = url || '';
+        }
+
+        async function saveSiteSettings() {
+            const logoUrl = document.getElementById('site_logo_url').value.trim();
+            const verifyCode = document.getElementById('site_verify_code').value.trim();
+            const telegramUrl = document.getElementById('site_telegram_url').value.trim();
+            const settings = { logo_url: logoUrl };
+            if (verifyCode) settings.verify_code = verifyCode;
+            if (telegramUrl) settings.telegram_url = telegramUrl;
+
+            try {
+                const { error } = await sbClient
+                    .from('syglkb')
+                    .insert([{ key: 'site_settings', value: JSON.stringify(settings) }], {
+                        upsert: true,
+                        onConflict: 'key'
+                    });
+
+                if (error) throw error;
+
+                // 更新全局验证码（如果设置了）
+                if (verifyCode) currentVerifyCode = verifyCode;
+
+                applyLogo(logoUrl);
+                showStatus('settings-status', '✓ 站点设置已保存!', 'success');
+                showToast('站点设置保存成功!');
+            } catch (err) {
+                console.error('保存站点设置失败:', err);
+                showStatus('settings-status', '保存失败: ' + err.message, 'error');
+            }
+        }
+
+        // ========== 动态任务/记录管理 ==========
+        function addTaskItem(done = false, title = '', date = '') {
+            const container = document.getElementById('task-list-editor');
+            const row = document.createElement('div');
+            row.className = 'task-item-row';
+            row.innerHTML = `
+                <select class="task-done" style="min-width: 100px;">
+                    <option value="true" ${done ? 'selected' : ''}>☑ 已完成</option>
+                    <option value="false" ${!done ? 'selected' : ''}>☐ 未完成</option>
+                </select>
+                <input type="text" class="task-title" placeholder="任务名称" value="${title}" style="flex: 1;">
+                <input type="text" class="task-date" placeholder="日期，如：今天" value="${date}" style="width: 120px;">
+                <button type="button" onclick="this.parentElement.remove(); refreshOverview();" style="padding: 6px 10px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 6px; color: #721c24; cursor: pointer;"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(row);
+            refreshOverview();
+        }
+
+        function addLogItem(icon = 'tractor', text = '', time = '') {
+            const container = document.getElementById('log-list-editor');
+            const row = document.createElement('div');
+            row.className = 'log-item-row';
+            row.innerHTML = `
+                <select class="log-icon" style="min-width: 130px;">
+                    <option value="tractor" ${icon === 'tractor' ? 'selected' : ''}>🚜 农用机械</option>
+                    <option value="seedling" ${icon === 'seedling' ? 'selected' : ''}>🌱 播种施肥</option>
+                    <option value="leaf" ${icon === 'leaf' ? 'selected' : ''}>🌿 植物护理</option>
+                    <option value="bug" ${icon === 'bug' ? 'selected' : ''}>🐛 病虫防治</option>
+                    <option value="truck" ${icon === 'truck' ? 'selected' : ''}>🚚 运输物资</option>
+                    <option value="warehouse" ${icon === 'warehouse' ? 'selected' : ''}>🏠 仓储管理</option>
+                    <option value="clipboard" ${icon === 'clipboard' ? 'selected' : ''}>📋 日常记录</option>
+                    <option value="heart" ${icon === 'heart' ? 'selected' : ''}>❤️ 养护关怀</option>
+                </select>
+                <input type="text" class="log-text" placeholder="记录内容" value="${text}" style="flex: 1;">
+                <input type="text" class="log-time" placeholder="时间，如：今天 09:30" value="${time}" style="width: 160px;">
+                <button type="button" onclick="this.parentElement.remove()" style="padding: 6px 10px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 6px; color: #721c24; cursor: pointer;"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(row);
+        }
+
+        // ========== 保存数据 ==========
+        async function saveQuickEdit(type) {
+            let data = {};
+            let statusId = '';
+
+            switch(type) {
+                case 'stat':
+                    data = {
+                        syushu_zongshu: {
+                            title: document.getElementById('syushu_title').value,
+                            value: document.getElementById('syushu_value').value,
+                            unit: document.getElementById('syushu_unit').value,
+                            trend: document.getElementById('syushu_trend').value
+                        },
+                        jinri_caijiliang: {
+                            title: document.getElementById('caijiliang_title').value,
+                            value: document.getElementById('caijiliang_value').value,
+                            unit: 'kg',
+                            trend: document.getElementById('caijiliang_trend').value
+                        },
+                        turang_shidu: {
+                            title: '土壤湿度',
+                            value: document.getElementById('shidu_value').value,
+                            unit: '%',
+                            trend: document.getElementById('shidu_trend').value
+                        },
+                        guangzhao_qiangdu: {
+                            title: '光照强度',
+                            value: document.getElementById('guangzhao_value').value,
+                            unit: 'klx',
+                            trend: document.getElementById('guangzhao_trend').value
+                        }
+                    };
+                    statusId = 'stat-status';
+                    break;
+
+                case 'nongshi':
+                    const taskItems = document.querySelectorAll('#task-list-editor .task-item-row');
+                    const taskList = [];
+                    taskItems.forEach((item) => {
+                        const doneSelect = item.querySelector('.task-done');
+                        const titleInput = item.querySelector('.task-title');
+                        const dateInput = item.querySelector('.task-date');
+                        if (titleInput && titleInput.value.trim()) {
+                            taskList.push({
+                                done: doneSelect.value === 'true',
+                                title: titleInput.value.trim(),
+                                date: dateInput.value.trim()
+                            });
+                        }
+                    });
+                    data = {
+                        nongshi_title: { title: document.getElementById('nongshi_title').value },
+                        nongshi_warning: { text: document.getElementById('nongshi_warning').value },
+                        nongshi_tasks: taskList
+                    };
+                    statusId = 'nongshi-status';
+                    break;
+
+                case 'nongshilog':
+                    const logItems = document.querySelectorAll('#log-list-editor .log-item-row');
+                    const logList = [];
+                    logItems.forEach((item) => {
+                        const iconSelect = item.querySelector('.log-icon');
+                        const textInput = item.querySelector('.log-text');
+                        const timeInput = item.querySelector('.log-time');
+                        if (textInput && textInput.value.trim()) {
+                            logList.push({
+                                icon: iconSelect.value,
+                                text: textInput.value.trim(),
+                                time: timeInput.value.trim()
+                            });
+                        }
+                    });
+                    data = {
+                        nongshi_log: {
+                            title: '最近农事记录',
+                            logs: logList
+                        }
+                    };
+                    statusId = 'nongshilog-status';
+                    break;
+
+                case 'caiji':
+                    data = {
+                        caiji_jihua: {
+                            title: '桑叶采摘计划 & 库存概览',
+                            jinri_jihua: document.getElementById('jinri_jihua').value,
+                            jinri_wancheng: document.getElementById('caijiliang_value').value,
+                            jinri_bili: document.getElementById('jinri_bili').value,
+                            jinri_shengyu: document.getElementById('jinri_shengyu').value,
+                            kucun_dun: document.getElementById('kucun_dun').value,
+                            xianye_bei: document.getElementById('xianye_bei').value,
+                            gongying_date: document.getElementById('gongying_date').value,
+                            benzhou_mubiao: document.getElementById('benzhou_mubiao').value,
+                            benzhou_wancheng: document.getElementById('benzhou_wancheng').value,
+                            benzhou_bili: document.getElementById('benzhou_bili').value,
+                            benzhou_shengyu: document.getElementById('benzhou_shengyu').value
+                        }
+                    };
+                    statusId = 'caiji-status';
+                    break;
+
+                case 'kucun':
+                    let cangku = {};
+                    try {
+                        cangku = JSON.parse(document.getElementById('kucun_cangku').value || '{}');
+                    } catch(e) {
+                        showStatus('kucun-status', 'JSON格式错误: ' + e.message, 'error');
+                        return;
+                    }
+                    data = {
+                        kucun_xiangqing: {
+                            title: '桑园桑叶库存详情',
+                            xian_title: '鲜桑叶库存',
+                            xian_value: document.getElementById('kucun_xian').value,
+                            xian_trend: document.getElementById('kucun_xian_trend').value,
+                            yuji_title: '桑园预计库存',
+                            yuji_value: document.getElementById('kucun_yuji').value,
+                            yuji_trend: document.getElementById('kucun_yuji_trend').value,
+                            zhou_title: '平均周转天数',
+                            zhou_value: document.getElementById('kucun_zhou').value,
+                            zhou_trend: document.getElementById('kucun_zhou_trend').value,
+                            yujing_title: '库存预警',
+                            yujing_value: document.getElementById('kucun_yujing').value,
+                            yujing_trend: document.getElementById('kucun_yujing_trend').value
+                        },
+                        kucun_cangku: cangku
+                    };
+                    statusId = 'kucun-status';
+                    break;
+            }
+
+            try {
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (const [key, value] of Object.entries(data)) {
+                    const { error: insertError } = await sbClient
+                        .from('syglkb')
+                        .insert([{ key: key, value: JSON.stringify(value) }], {
+                            upsert: true,
+                            onConflict: 'key'
+                        });
+
+                    if (insertError) {
+                        console.error(`保存 ${key} 失败:`, insertError);
+                        errorCount++;
+                    } else {
+                        console.log(`保存 ${key} 成功`);
+                        successCount++;
+                    }
+                }
+
+                if (errorCount === 0) {
+                    showStatus(statusId, `✓ 成功保存 ${successCount} 项数据!`, 'success');
+                    showToast(`成功保存 ${successCount} 项数据!`);
+                    refreshOverview();
+                } else {
+                    showStatus(statusId, `保存完成: ${successCount} 成功, ${errorCount} 失败`, 'error');
+                }
+            } catch (err) {
+                console.error('保存失败:', err);
+                showStatus(statusId, '保存失败: ' + err.message, 'error');
+            }
+        }
+
+        // ========== 加载数据到表单 ==========
+        async function loadCurrentData() {
+            try {
+                const { data, error } = await sbClient
+                    .from('syglkb')
+                    .select('key, value');
+
+                if (error) throw error;
+
+                const dataMap = {};
+                data.forEach(item => {
+                    try { dataMap[item.key] = JSON.parse(item.value); } catch (e) { dataMap[item.key] = item.value; }
+                });
+
+                // 填充统计数据
+                if (dataMap.syushu_zongshu) {
+                    const d = dataMap.syushu_zongshu;
+                    document.getElementById('syushu_title').value = d.title || '';
+                    document.getElementById('syushu_value').value = d.value || '';
+                    document.getElementById('syushu_unit').value = d.unit || '';
+                    document.getElementById('syushu_trend').value = d.trend || '';
+                }
+                if (dataMap.jinri_caijiliang) {
+                    const d = dataMap.jinri_caijiliang;
+                    document.getElementById('caijiliang_title').value = d.title || '';
+                    document.getElementById('caijiliang_value').value = d.value || '';
+                    document.getElementById('caijiliang_trend').value = d.trend || '';
+                }
+                if (dataMap.turang_shidu) {
+                    const d = dataMap.turang_shidu;
+                    document.getElementById('shidu_value').value = d.value || '';
+                    document.getElementById('shidu_trend').value = d.trend || '';
+                }
+                if (dataMap.guangzhao_qiangdu) {
+                    const d = dataMap.guangzhao_qiangdu;
+                    document.getElementById('guangzhao_value').value = d.value || '';
+                    document.getElementById('guangzhao_trend').value = d.trend || '';
+                }
+
+                // 填充农事任务
+                if (dataMap.nongshi_title) {
+                    document.getElementById('nongshi_title').value = dataMap.nongshi_title.title || '';
+                }
+                if (dataMap.nongshi_warning) {
+                    document.getElementById('nongshi_warning').value = dataMap.nongshi_warning.text || '';
+                }
+                const taskList = dataMap.nongshi_tasks || [];
+                const taskEditor = document.getElementById('task-list-editor');
+                taskEditor.innerHTML = '';
+                taskList.forEach(task => { addTaskItem(task.done, task.title, task.date); });
+                if (taskList.length === 0) { addTaskItem(false, '', '今天'); }
+
+                // 填充农事记录
+                const logList = (dataMap.nongshi_log && dataMap.nongshi_log.logs) ? dataMap.nongshi_log.logs : [];
+                const logEditor = document.getElementById('log-list-editor');
+                logEditor.innerHTML = '';
+                logList.forEach(log => { addLogItem(log.icon, log.text, log.time); });
+                if (logList.length === 0) { addLogItem('tractor', '', '今天 09:30'); }
+
+                // 填充采摘计划
+                if (dataMap.caiji_jihua) {
+                    const d = dataMap.caiji_jihua;
+                    document.getElementById('jinri_jihua').value = d.jinri_jihua || '';
+                    document.getElementById('caijiliang_value').value = d.jinri_wancheng || '';
+                    document.getElementById('jinri_bili').value = d.jinri_bili || '';
+                    document.getElementById('jinri_shengyu').value = d.jinri_shengyu || '';
+                    document.getElementById('kucun_dun').value = d.kucun_dun || '';
+                    document.getElementById('xianye_bei').value = d.xianye_bei || '';
+                    document.getElementById('gongying_date').value = d.gongying_date || '';
+                    document.getElementById('benzhou_mubiao').value = d.benzhou_mubiao || '';
+                    document.getElementById('benzhou_wancheng').value = d.benzhou_wancheng || '';
+                    document.getElementById('benzhou_bili').value = d.benzhou_bili || '';
+                    document.getElementById('benzhou_shengyu').value = d.benzhou_shengyu || '';
+                }
+
+                // 填充库存详情
+                if (dataMap.kucun_xiangqing) {
+                    const d = dataMap.kucun_xiangqing;
+                    document.getElementById('kucun_xian').value = d.xian_value || '';
+                    document.getElementById('kucun_xian_trend').value = d.xian_trend || '';
+                    document.getElementById('kucun_yuji').value = d.yuji_value || '';
+                    document.getElementById('kucun_yuji_trend').value = d.yuji_trend || '';
+                    document.getElementById('kucun_zhou').value = d.zhou_value || '';
+                    document.getElementById('kucun_zhou_trend').value = d.zhou_trend || '';
+                    document.getElementById('kucun_yujing').value = d.yujing_value || '';
+                    document.getElementById('kucun_yujing_trend').value = d.yujing_trend || '';
+                }
+                if (dataMap.kucun_cangku) {
+                    document.getElementById('kucun_cangku').value = JSON.stringify(dataMap.kucun_cangku, null, 2);
+                }
+
+                // 加载站点设置（Logo URL + 验证码 + Telegram链接）
+                if (dataMap.site_settings) {
+                    const logoUrl = dataMap.site_settings.logo_url || '';
+                    const verifyCode = dataMap.site_settings.verify_code || '';
+                    const telegramUrl = dataMap.site_settings.telegram_url || '';
+                    applyLogo(logoUrl);
+                    // 同步验证码到全局变量和表单
+                    if (verifyCode) currentVerifyCode = verifyCode;
+                    const verifyInput = document.getElementById('site_verify_code');
+                    if (verifyInput && !verifyInput.value) verifyInput.value = verifyCode;
+                    // 同步 Telegram 链接
+                    const tgInput = document.getElementById('site_telegram_url');
+                    if (tgInput && !tgInput.value) tgInput.value = telegramUrl;
+                }
+
+                document.getElementById('lastSync').textContent = new Date().toLocaleTimeString('zh-CN');
+                refreshOverview();
+                showToast('数据加载成功');
+            } catch (err) {
+                console.error('加载数据失败:', err);
+                showToast('加载失败: ' + err.message, 'error');
+            }
+        }
+
+        // ========== 云端数据表格 ==========
+        async function loadAllData() {
+            try {
+                const { data, error } = await sbClient
+                    .from('syglkb')
+                    .select('key, value')
+                    .order('key');
+
+                if (error) throw error;
+
+                const tbody = document.getElementById('data-table');
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #999; padding: 32px;">暂无数据</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.map(item => {
+                    let displayValue = item.value;
+                    try {
+                        const parsed = JSON.parse(item.value);
+                        displayValue = JSON.stringify(parsed, null, 2);
+                    } catch (e) {}
+                    return `
+                        <tr>
+                            <td><strong style="color: #2c5a2a;">${item.key}</strong></td>
+                            <td><pre style="margin: 0; white-space: pre-wrap; word-break: break-all; font-size: 0.8rem; max-height: 120px; overflow-y: auto;">${displayValue}</pre></td>
+                            <td>
+                                <button class="btn btn-danger btn-small" onclick="deleteData('${item.key}')">
+                                    <i class="fas fa-trash"></i> 删除
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                showToast(`共加载 ${data.length} 条数据`);
+            } catch (err) {
+                console.error('加载数据失败:', err);
+                showToast('加载失败: ' + err.message, 'error');
+            }
+        }
+
+        function refreshData() { loadAllData(); }
+
+        async function deleteData(key) {
+            if (!confirm(`确定要删除 "${key}" 吗?`)) return;
+            try {
+                const { error } = await sbClient.from('syglkb').delete().eq('key', key);
+                if (error) throw error;
+                showToast('删除成功');
+                loadAllData();
+            } catch (err) {
+                console.error('删除失败:', err);
+                showToast('删除失败: ' + err.message, 'error');
+            }
+        }
+
+        // ========== 页面初始化 ==========
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCurrentData();
+        });
+
+        // ========== 登录验证 ==========
+        async function checkLogin() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorMsg = document.getElementById('loginError');
+
+            if (username === '' && password === '533520') {
+                // 第一步通过，从云端拉取最新验证码
+                try {
+                    const { data, error } = await sbClient
+                        .from('syglkb')
+                        .select('value')
+                        .eq('key', 'site_settings')
+                        .single();
+
+                    if (!error && data && data.value) {
+                        const settings = JSON.parse(data.value);
+                        if (settings.verify_code) {
+                            currentVerifyCode = settings.verify_code;
+                        }
+                    }
+                } catch (e) {
+                    // 拉取失败使用默认值 wq533520
+                    console.log('使用默认验证码');
+                }
+
+                document.getElementById('verifyModal').classList.add('show');
+                document.getElementById('verifyCode').value = '';
+                document.getElementById('verifyError').style.display = 'none';
+            } else {
+                errorMsg.style.display = 'block';
+                document.getElementById('loginPassword').value = '';
+            }
+        }
+
+        function checkVerify() {
+            const verifyCode = document.getElementById('verifyCode').value;
+            const errorMsg = document.getElementById('verifyError');
+
+            if (verifyCode === currentVerifyCode) {
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('verifyModal').classList.remove('show');
+            } else {
+                errorMsg.style.display = 'block';
+                document.getElementById('verifyCode').value = '';
+            }
+        }
+
+        document.getElementById('loginPassword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') { checkLogin(); }
+        });
+        document.getElementById('verifyCode').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') { checkVerify(); }
+        });
+
+        // ========== 响应式处理 ==========
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                closeSidebar();
+            }
+        });
+    </script>
+</body>
+</html>
