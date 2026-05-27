@@ -3,660 +3,1355 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>希田智慧-起始页</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>希田智慧 信息中枢</title>
     <style>
+        :root {
+            --bg: #050a08;
+            --green-neon: #00ff88;
+            --green-mid: #00cc6a;
+            --green-deep: #007a3d;
+            --green-glow: rgba(0, 255, 136, 0.4);
+            --text: #d0f0e0;
+            --text-dim: #8ab8a0;
+            --card-bg: rgba(8, 22, 16, 0.75);
+            --border-glow: rgba(0, 255, 136, 0.5);
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
         }
 
         body {
-            background: linear-gradient(135deg,#e0eafc,#cfdef3);
-            min-height: 100vh;
+            background: var(--bg);
+            font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+            overflow-x: hidden;
+            cursor: none;
+            -webkit-user-select: none;
+            user-select: none;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Three.js 画布 */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* 鼠标光晕层 */
+        #cursor-glow {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: radial-gradient(circle,
+                    rgba(0, 255, 136, 0.25) 0%,
+                    rgba(0, 255, 136, 0.10) 25%,
+                    rgba(0, 200, 100, 0.03) 50%,
+                    transparent 70%);
+            transform: translate(-50%, -50%);
+            transition: width 0.3s ease, height 0.3s ease;
+            will-change: left, top;
+        }
+        #cursor-dot {
+            position: fixed;
+            pointer-events: none;
+            z-index: 10000;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #00ff88;
+            box-shadow: 0 0 16px 6px rgba(0, 255, 136, 0.7), 0 0 40px 14px rgba(0, 255, 136, 0.3);
+            transform: translate(-50%, -50%);
+            will-change: left, top;
+        }
+        #cursor-trail {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9998;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: radial-gradient(circle,
+                    rgba(0, 255, 150, 0.4) 0%,
+                    transparent 70%);
+            transform: translate(-50%, -50%);
+            will-change: left, top;
+            transition: left 0.08s ease-out, top 0.08s ease-out;
+        }
+
+        /* 主容器 */
+        .main-container {
+            position: relative;
+            z-index: 10;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            position: relative;
-            overflow-x: hidden;
-            transition: background 0.4s ease;
-            /* 整体上移20px */
-            transform: translateY(-30px);
-        }
-
-        #particles-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            min-height: 100vh;
+            padding: 40px 20px;
             pointer-events: none;
-            z-index: 9999;
+        }
+        .main-container>* {
+            pointer-events: auto;
         }
 
-        .search-container {
-            width: 60%;
-            max-width: 800px;
-            position: relative;
+        /* 顶部标题 */
+        .header {
+            text-align: center;
             margin-bottom: 20px;
         }
-
-        .search-bar {
-            display: flex;
-            align-items: center;
-            border: 1px solid rgba(255,255,255,0.35);
-            border-radius: 999px;
-            padding: 8px 16px;
-            /* 毛玻璃效果 */
-            background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        .header .subtitle {
+            font-size: 0.85rem;
+            letter-spacing: 0.35em;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            font-weight: 300;
         }
-
-        .engine-selector {
+        .header h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            color: #e0fff0;
+            text-shadow: 0 0 60px var(--green-glow), 0 0 120px rgba(0, 255, 136, 0.25);
+            margin: 0;
             position: relative;
-            margin-right: 10px;
+            display: inline-block;
         }
-
-        .engine-btn {
-            background: none;
-            border: none;
-            color: #0066cc;
-            font-size: 20px;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .engine-dropdown {
+        .header h1::after {
+            content: '';
             position: absolute;
-            top: 120%;
-            left: 0;
-            background: rgba(255,255,255,0.85);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,255,255,0.4);
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            display: none;
-            min-width: 100px;
-            z-index: 100;
-        }
-
-        .engine-dropdown.active {
-            display: block;
-        }
-
-        .engine-option {
-            padding: 8px 12px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background 0.2s;
-        }
-
-        .engine-option:hover {
-            background: rgba(0,0,0,0.05);
-        }
-
-        .search-input {
-            flex: 1;
-            border: none;
-            outline: none;
-            font-size: 18px;
-            padding: 8px 0;
-            background: transparent;
-        }
-
-        .search-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #0066cc;
-            font-size: 22px;
-        }
-
-        .links-container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 18px;
-            margin-top: 15px;
-            max-width: 85%;
-        }
-
-        .link-item {
-            position: relative;
-            font-size: 16px;
-            color: #222;
-            cursor: pointer;
-            padding: 6px 10px;
-            border-radius: 6px;
-            transition: all 0.2s;
-            text-decoration: none;
-        }
-
-        .link-item:hover {
-            background: rgba(255,255,255,0.6);
-        }
-
-        .link-delete-btn {
-            position: absolute;
-            top: -22px;
+            bottom: -8px;
             left: 50%;
             transform: translateX(-50%);
-            background: #f53f3f;
-            color: #fff;
-            border: none;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-            display: none;
-            white-space: nowrap;
+            width: 60%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--green-neon), transparent);
+            border-radius: 1px;
         }
 
-        .add-link-btn {
-            font-size: 18px;
-            color: #444;
-            cursor: pointer;
-            padding: 6px 12px;
-            border-radius: 6px;
-            transition: background 0.2s;
-        }
-
-        .add-link-btn:hover {
-            background: rgba(255,255,255,0.6);
-        }
-
-        .add-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
+        /* 指路牌网格 */
+        .signpost-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            justify-content: center;
+            align-items: stretch;
+            max-width: 1300px;
             width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: none;
+            margin-top: 10px;
+        }
+
+        /* 指路牌卡片 */
+        .sign-card {
+            position: relative;
+            background: var(--card-bg);
+            border: 1.5px solid var(--border-glow);
+            border-radius: 16px;
+            padding: 28px 18px 22px;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow:
+                0 4px 30px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(0, 255, 136, 0.08),
+                0 0 0 1px rgba(0, 255, 136, 0.08);
+            overflow: visible;
+        }
+        .sign-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green-neon);
+            box-shadow: 0 0 16px 4px var(--green-glow), 0 0 36px 10px rgba(0, 255, 136, 0.2);
+            z-index: 2;
+            transition: all 0.35s ease;
+        }
+        .sign-card::after {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 14px;
+            background: linear-gradient(to bottom, var(--green-neon), rgba(0, 255, 136, 0.2));
+            border-radius: 1px;
+            z-index: 1;
+        }
+        .sign-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--green-neon);
+            box-shadow:
+                0 12px 50px rgba(0, 0, 0, 0.6),
+                0 0 30px rgba(0, 255, 136, 0.3),
+                0 0 80px rgba(0, 255, 136, 0.12),
+                inset 0 1px 0 rgba(0, 255, 136, 0.15);
+        }
+        .sign-card:hover::before {
+            width: 12px;
+            height: 12px;
+            box-shadow: 0 0 28px 8px var(--green-glow), 0 0 60px 18px rgba(0, 255, 136, 0.35);
+        }
+        .sign-card .card-icon {
+            font-size: 2.6rem;
+            margin-bottom: 10px;
+            margin-top: 6px;
+            filter: drop-shadow(0 0 10px rgba(0, 255, 136, 0.5));
+            transition: all 0.35s ease;
+        }
+        .sign-card:hover .card-icon {
+            filter: drop-shadow(0 0 20px rgba(0, 255, 136, 0.8));
+            transform: scale(1.1);
+        }
+        .sign-card .card-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #e0fff0;
+            letter-spacing: 0.04em;
+            margin-bottom: 6px;
+        }
+        .sign-card .card-desc {
+            font-size: 0.78rem;
+            color: var(--text-dim);
+            letter-spacing: 0.03em;
+            line-height: 1.4;
+        }
+        .sign-card .card-arrow {
+            margin-top: 10px;
+            width: 32px;
+            height: 3px;
+            background: var(--green-mid);
+            border-radius: 2px;
+            position: relative;
+            transition: all 0.35s ease;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+        .sign-card .card-arrow::after {
+            content: '';
+            position: absolute;
+            right: -2px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 10px solid var(--green-neon);
+            border-top: 7px solid transparent;
+            border-bottom: 7px solid transparent;
+            filter: drop-shadow(0 0 6px rgba(0, 255, 136, 0.6));
+        }
+        .sign-card:hover .card-arrow {
+            width: 42px;
+            box-shadow: 0 0 22px rgba(0, 255, 136, 0.8);
+        }
+
+        /* 底部信息 */
+        .footer-hint {
+            margin-top: 36px;
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 0.75rem;
+            letter-spacing: 0.2em;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        .footer-hint span {
+            animation: hintPulse 2.5s ease-in-out infinite;
+            display: inline-block;
+        }
+        @keyframes hintPulse {
+            0%,
+            100% {
+                opacity: 0.5;
+            }
+            50% {
+                opacity: 1;
+                color: var(--green-neon);
+                text-shadow: 0 0 10px var(--green-glow);
+            }
+        }
+
+        /* ==================== 弹窗/面板样式 ==================== */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(2, 8, 5, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 10000;
+            display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 200;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.35s ease;
         }
-
-        .add-modal.active {
-            display: flex;
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
         }
-
-        .modal-content {
-            background: #fff;
-            padding: 24px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 400px;
+        .modal-panel {
+            background: linear-gradient(145deg, rgba(10, 28, 18, 0.95), rgba(5, 15, 10, 0.98));
+            border: 1.5px solid var(--border-glow);
+            border-radius: 20px;
+            padding: 32px 28px;
+            min-width: 420px;
+            max-width: 90vw;
+            max-height: 80vh;
+            overflow-y: auto;
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(0,255,136,0.15), inset 0 1px 0 rgba(0,255,136,0.1);
         }
-
+        .modal-overlay.active .modal-panel { transform: scale(1) translateY(0); }
+        .modal-panel::-webkit-scrollbar { width: 6px; }
+        .modal-panel::-webkit-scrollbar-track { background: rgba(0,255,136,0.05); border-radius: 3px; }
+        .modal-panel::-webkit-scrollbar-thumb { background: rgba(0,255,136,0.3); border-radius: 3px; }
+        .modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 24px; padding-bottom: 16px;
+            border-bottom: 1px solid rgba(0,255,136,0.2);
+        }
         .modal-title {
-            font-size: 20px;
-            margin-bottom: 16px;
-            text-align: center;
+            font-size: 1.3rem; font-weight: 600; color: #e0fff0;
+            letter-spacing: 0.05em;
+            display: flex; align-items: center; gap: 10px;
         }
+        .modal-title .icon { font-size: 1.5rem; }
+        .modal-close {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.3);
+            color: var(--green-neon); font-size: 1.2rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.25s ease;
+        }
+        .modal-close:hover { background: rgba(0,255,136,0.2); transform: rotate(90deg); }
+        .modal-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+        .modal-link-item {
+            background: rgba(8,22,16,0.7); border: 1px solid rgba(0,255,136,0.2);
+            border-radius: 12px; padding: 16px 18px; cursor: pointer;
+            transition: all 0.3s ease; display: flex; align-items: center; gap: 12px;
+        }
+        .modal-link-item:hover {
+            background: rgba(0,255,136,0.1); border-color: var(--green-neon);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 0 20px rgba(0,255,136,0.2);
+        }
+        .modal-link-item .item-icon { font-size: 1.6rem; filter: drop-shadow(0 0 6px rgba(0,255,136,0.4)); }
+        .modal-link-item .item-info { flex: 1; }
+        .modal-link-item .item-name { font-size: 0.95rem; font-weight: 500; color: #e0fff0; margin-bottom: 3px; }
+        .modal-link-item .item-desc { font-size: 0.75rem; color: var(--text-dim); }
+        .item-arrow {
+            width: 24px; height: 2px; background: var(--green-mid);
+            border-radius: 1px; position: relative; transition: all 0.3s ease;
+        }
+        .item-arrow::after {
+            content: ''; position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+            border-left: 8px solid var(--green-neon); border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+        }
+        .modal-link-item:hover .item-arrow { width: 32px; box-shadow: 0 0 12px rgba(0,255,136,0.5); }
 
-        .modal-input-group {
-            margin-bottom: 12px;
+        /* 管理入口样式 */
+        .admin-entry {
+            background: linear-gradient(135deg, rgba(20,40,30,0.9), rgba(10,25,18,0.95));
+            border: 1.5px solid var(--green-deep); margin-top: 20px; grid-column: 1/-1;
         }
+        .admin-entry:hover { border-color: #ffaa00; box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 0 25px rgba(255,170,0,0.2); }
+        .admin-entry .item-icon { filter: drop-shadow(0 0 8px rgba(255,170,0,0.5)); }
+        .admin-entry .item-name { color: #ffcc66; }
+        .admin-entry .item-arrow { background: #ffaa00; }
+        .admin-entry .item-arrow::after { border-left-color: #ffcc00; }
 
-        .modal-input-group label {
-            display: block;
-            margin-bottom: 4px;
-            font-size: 14px;
-            color: #666;
+        /* 响应式 */
+        @media (max-width: 1200px) {
+            .signpost-grid {
+                grid-template-columns: repeat(4, 1fr);
+                max-width: 1050px;
+            }
         }
-
-        .modal-input-group input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
+        @media (max-width: 950px) {
+            .signpost-grid {
+                grid-template-columns: repeat(3, 1fr);
+                max-width: 800px;
+            }
         }
-
-        .modal-buttons {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            margin-top: 16px;
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            .signpost-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 16px;
+                max-width: 500px;
+            }
+            .sign-card {
+                min-height: 160px;
+                padding: 20px 14px 16px;
+                border-radius: 12px;
+            }
+            .sign-card .card-icon {
+                font-size: 2rem;
+            }
+            .sign-card .card-title {
+                font-size: 0.95rem;
+            }
+            .sign-card .card-desc {
+                font-size: 0.7rem;
+            }
+            #cursor-glow {
+                width: 140px;
+                height: 140px;
+            }
+            #cursor-dot {
+                width: 7px;
+                height: 7px;
+            }
         }
-
-        .modal-btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .modal-btn.cancel {
-            background: #eee;
-        }
-
-        .modal-btn.save {
-            background: #0066cc;
-            color: #fff;
-        }
-
-        .status-bar {
-            position: fixed;
-            bottom: 1px;
-            left: 26px;
-            font-size: 13px;
-            color: #333;
-            display: flex;
-            gap: 15px;
-            background: rgba(255,255,255,0.4);
-            padding: 6px 12px;
-            border-radius: 8px;
-        }
-
-        .status-item {
-            position: relative;
-            cursor: pointer;
-        }
-
-        .copyright {
-            position: fixed;
-            bottom: 1px;
-            right: 39px;
-            font-size: 13px;
-            color: #444;
-            display: flex;
-            align-items: center;
-            gap: 8px; /* logo和文字之间的间距，可改 */
-        }
-
-        .logo-placeholder {
-              /* 高度和两行文字的总高度完全匹配 */
-              height: calc(13px * 2 * 1.5);
-              aspect-ratio: 1/1; /* 正方形logo，可改比例 */
-              /* 稳定可访问的网络占位图，预览就能看到 */
-              background: url("https://img.seetion.cn/images/qishiyelogo.png") center / contain no-repeat;
-              border-radius: 4px; /* 可选：圆角效果 */
-              /* 防止加载失败时显示背景色 */
-              background-color: #f0f0f0;
-        }
-
-        .text-group {
-              line-height: 1.5; /* 控制两行文字的行间距 */
-              text-align: left;
-        }
-        .wallpaper-btn {
-            cursor: pointer;
-            color: #0066cc;
-            font-weight:500;
-        }
-
-        /* 渐变背景设置面板 */
-        .bg-set-panel {
-            position:fixed;
-            bottom:60px;
-            left:16px;
-            background:#fff;
-            padding:15px;
-            border-radius:10px;
-            box-shadow:0 3px 15px rgba(0,0,0,0.2);
-            display:none;
-            z-index:100;
-            width:280px;
-        }
-        .bg-set-panel.show {
-            display:block;
-        }
-        .color-row {
-            display:flex;
-            justify-content:space-between;
-            margin:8px 0;
-        }
-        .color-row input[type="color"] {
-            width:100px;
-            height:35px;
-            border:none;
-            cursor:pointer;
-        }
-        .angle-box {
-            margin:10px 0;
-        }
-        .angle-box input {
-            width:100%;
-        }
-        .panel-btn {
-            width:100%;
-            margin-top:10px;
-            padding:7px;
-            border:none;
-            border-radius:5px;
-            background:#0066cc;
-            color:#fff;
-            cursor:pointer;
+        @media (max-width: 480px) {
+            .signpost-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            .sign-card {
+                flex-direction: row;
+                text-align: left;
+                gap: 16px;
+                padding: 18px 20px;
+                min-height: auto;
+            }
+            .sign-card::before {
+                left: 16px;
+                top: 50%;
+                transform: translateY(-50%);
+            }
+            .sign-card::after {
+                left: 20px;
+                top: 50%;
+                transform: translateY(-50%) rotate(90deg);
+                width: 10px;
+                height: 2px;
+            }
+            .sign-card .card-arrow {
+                display: none;
+            }
+            .sign-card .card-icon {
+                margin: 0;
+                font-size: 1.8rem;
+            }
+            .modal-panel {
+                min-width: auto;
+                width: 94vw;
+                padding: 24px 16px;
+                border-radius: 14px;
+                max-height: 85vh;
+            }
+            .modal-header { margin-bottom: 16px; padding-bottom: 12px; }
+            .modal-title { font-size: 1.1rem; }
+            .modal-grid { grid-template-columns: 1fr; gap: 10px; }
+            .modal-link-item { padding: 14px; }
         }
     </style>
 </head>
 <body>
-    <canvas id="particles-canvas"></canvas>
+    <!-- 预注册全局函数，确保 onclick 始终可用 -->
+    <script>
+        window.openModal = window.openModal || function(type) {
+            var m = document.getElementById('modal-' + type);
+            if (m) m.classList.add('active');
+        };
+        window.closeModal = window.closeModal || function(type) {
+            var m = document.getElementById('modal-' + type);
+            if (m) m.classList.remove('active');
+        };
+        window.navigateTo = window.navigateTo || function(name, url) {
+            var t = document.createElement('div');
+            t.style.cssText = 'position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:rgba(8,22,16,0.9);border:1px solid rgba(0,255,136,0.6);color:#e0fff0;padding:14px 28px;border-radius:30px;font-size:0.9rem;z-index:10002;pointer-events:none;box-shadow:0 8px 30px rgba(0,0,0,0.5)';
+            t.textContent = '即将前往：' + name;
+            document.body.appendChild(t);
+            setTimeout(function() { t.remove(); }, 2400);
+            setTimeout(function() { window.open(url, '_blank'); }, 2500);
+        };
+    </script>
 
-    <div class="search-container">
-        <div class="search-bar">
-            <div class="engine-selector">
-                <button class="engine-btn" id="engineBtn">bing ▾</button>
-                <div class="engine-dropdown" id="engineDropdown">
-                    <div class="engine-option" data-engine="bing">Bing</div>
-                    <div class="engine-option" data-engine="yandex">Yandex</div>
-                    <div class="engine-option" data-engine="baidu">Baidu</div>
+    <!-- Three.js 背景画布 -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- 鼠标光效 -->
+    <div id="cursor-glow"></div>
+    <div id="cursor-trail"></div>
+    <div id="cursor-dot"></div>
+
+    <!-- 主界面 -->
+    <div class="main-container">
+        <div class="header">
+            <p class="subtitle">Welcome to Seetion</p>
+            <h1>欢迎光临 · 贵州希田</h1>
+        </div>
+
+        <div class="signpost-grid">
+            <!-- 卡片1 - 公司主页（固定） -->
+            <div class="sign-card" onclick="navigateTo('公司主页', 'https://seetion.cn')" title="点击前往 公司主页">
+                <div class="card-icon">📋</div>
+                <div class="card-title">公司主页</div>
+                <div class="card-desc">公司介绍 · 业务概况</div>
+                <div class="card-arrow"></div>
+            </div>
+
+            <!-- 卡片2 - 公司起始页（固定） -->
+            <div class="sign-card" onclick="navigateTo('公司起始页', 'https://i.seetion.cn')" title="点击前往 公司起始页">
+                <div class="card-icon">📚</div>
+                <div class="card-title">公司起始页</div>
+                <div class="card-desc">简洁美观 · 希田出品</div>
+                <div class="card-arrow"></div>
+            </div>
+
+            <!-- 卡片3 - 公司屏保（固定） -->
+            <div class="sign-card" onclick="navigateTo('公司屏保', 'https://k.seetion.cn/gspb.html')" title="点击前往 公司屏保">
+                <div class="card-icon">💽</div>
+                <div class="card-title">公司屏保</div>
+                <div class="card-desc">动效炫酷 · 省电节能</div>
+                <div class="card-arrow"></div>
+            </div>
+
+            <!-- 卡片4 - 数据看板 -->
+            <div class="sign-card" onclick="openModal('kanban')" title="点击查看数据看板">
+                <div class="card-icon">🚀</div>
+                <div class="card-title">数据看板</div>
+                <div class="card-desc">基地运营 · 生产管理</div>
+                <div class="card-arrow"></div>
+            </div>
+
+            <!-- 卡片5 - 常用工具 -->
+            <div class="sign-card" onclick="openModal('tools')" title="点击查看常用工具">
+                <div class="card-icon">🛠</div>
+                <div class="card-title">常用工具</div>
+                <div class="card-desc">高效工具 · 趣味实用</div>
+                <div class="card-arrow"></div>
+            </div>
+        </div>
+
+        <!-- 数据看板弹窗 -->
+        <div class="modal-overlay" id="modal-kanban">
+            <div class="modal-panel">
+                <div class="modal-header">
+                    <div class="modal-title"><span class="icon">🚀</span><span>数据看板</span></div>
+                    <button class="modal-close" onclick="closeModal('kanban')">✕</button>
+                </div>
+                <div class="modal-grid" id="kanban-links">
+                    <div style="text-align:center;padding:40px 20px;color:var(--text-dim);grid-column:1/-1;">
+                        <div style="font-size:2rem;margin-bottom:10px;">📭</div>
+                        <div>暂无数据，请到后台添加</div>
+                    </div>
                 </div>
             </div>
-            <input type="text" class="search-input" placeholder="输入搜索关键词或网址" id="searchInput">
-            <button class="search-btn" id="searchBtn">🔍</button>
         </div>
-    </div>
 
-    <div class="links-container" id="linksContainer"></div>
-
-    <div class="add-modal" id="addModal">
-        <div class="modal-content">
-            <h3 class="modal-title">添加自定义链接</h3>
-            <div class="modal-input-group">
-                <label>文本</label>
-                <input type="text" id="linkTextInput" placeholder="例如：我的网站">
+        <!-- 常用工具弹窗 -->
+        <div class="modal-overlay" id="modal-tools">
+            <div class="modal-panel">
+                <div class="modal-header">
+                    <div class="modal-title"><span class="icon">🛠</span><span>常用工具</span></div>
+                    <button class="modal-close" onclick="closeModal('tools')">✕</button>
+                </div>
+                <div class="modal-grid" id="tools-links">
+                    <div style="text-align:center;padding:40px 20px;color:var(--text-dim);grid-column:1/-1;">
+                        <div style="font-size:2rem;margin-bottom:10px;">📭</div>
+                        <div>暂无数据，请到后台添加</div>
+                    </div>
+                </div>
+                <div class="modal-link-item admin-entry" onclick="navigateTo('后台管理','admin.html')">
+                    <span class="item-icon">⚙️</span>
+                    <div class="item-info">
+                        <div class="item-name">后台管理</div>
+                        <div class="item-desc">配置管理面板</div>
+                    </div>
+                    <div class="item-arrow"></div>
+                </div>
             </div>
-            <div class="modal-input-group">
-                <label>链接</label>
-                <input type="text" id="linkUrlInput" placeholder="https://seetion.cn">
-            </div>
-            <div class="modal-buttons">
-                <button class="modal-btn cancel" id="cancelAddBtn">取消</button>
-                <button class="modal-btn save" id="saveAddBtn">保存</button>
-            </div>
         </div>
+
+        <p class="footer-hint"><span>✦ Guizhou Seetion Smart Agriculture Technology Co., Ltd. ✦</span></p>
     </div>
 
-    <!-- 渐变背景设置面板 -->
-    <div class="bg-set-panel" id="bgPanel">
-        <h4 style="margin-bottom:10px;text-align:center">渐变背景设置</h4>
-        <div class="color-row">
-            <span>起始颜色</span>
-            <input type="color" id="color1" value="#2DC4AB">
-        </div>
-        <div class="color-row">
-            <span>结束颜色</span>
-            <input type="color" id="color2" value="#66E43F">
-        </div>
-        <div class="angle-box">
-            <span>渐变角度：<span id="angleNum">5</span>°</span>
-            <input type="range" id="angleRange" min="0" max="360" value="5">
-        </div>
-        <button class="panel-btn" id="saveBgBtn">确认应用全局背景</button>
-    </div>
+    <!-- Three.js CDN -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
 
-    <div class="status-bar">
-        <div class="wallpaper-btn" id="wallpaperBtn">墙纸更换</div>
-        <div class="status-item">
-            <span id="currentTime">加载时间...</span>
-        </div>
-        <a href="https://seetion.cn" target="_blank" class="link-item" style="font-size: 13px; color: #212222e7; text-decoration: none; padding: 0;">希田智农</a>
-        <a href="https://i.seetion.cn" target="_blank" class="link-item" style="font-size: 13px; color: #212222e7; text-decoration: none; padding: 0;">屏保</a>
-    </div>
+    <script type="module">
+        import * as THREE from 'three';
 
-    <div class="copyright">
-  <!-- logo占位符 -->
-  <a href="https://seetion.cn" target="_blank" style="text-decoration:none;display:flex;align-items:center;gap:8px;">
-    <div class="logo-placeholder"></div>
-  </a>
-  <div class="text-group">
-    贵州希田智慧农业科技有限公司<br>
-    Guizhou Seetion Smart Agriculture Technology Co., Ltd.
-  </div>
-</div>
+        // ==================== DOM 元素 ====================
+        const canvas = document.getElementById('bg-canvas');
+        const cursorGlow = document.getElementById('cursor-glow');
+        const cursorTrail = document.getElementById('cursor-trail');
+        const cursorDot = document.getElementById('cursor-dot');
 
-    <script>
-        // 修改存储键名
-        const STORAGE_KEY = 'doubaodaohangV3.1';
-        const DEFAULT_LINKS = [
-            { text: 'DeepSeek', url: 'https://www.deepseek.com' },
-            { text: '豆包', url: 'https://www.doubao.com' },
-            { text: 'Seetion', url: 'https://seetion.cn' },
-            { text: '屏保', url: 'https://i.Seetion.cn' },
+        // ==================== 鼠标追踪 ====================
+        const mouse = { x: 0, y: 0, tx: 0, ty: 0, worldX: 0, worldY: 0, worldZ: 0 };
+        const mousePrev = { x: 0, y: 0 };
+
+        document.addEventListener('mousemove', (e) => {
+            mousePrev.x = mouse.tx;
+            mousePrev.y = mouse.ty;
+            mouse.tx = e.clientX;
+            mouse.ty = e.clientY;
+        });
+
+        // 移动端触摸
+        document.addEventListener('touchmove', (e) => {
+            mousePrev.x = mouse.tx;
+            mousePrev.y = mouse.ty;
+            mouse.tx = e.touches[0].clientX;
+            mouse.ty = e.touches[0].clientY;
+        }, { passive: true });
+
+        // ==================== Three.js 场景初始化 ====================
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.3;
+
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2('#020805', 0.00015);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.5, 40);
+        camera.position.set(0, 0.3, 9);
+        camera.lookAt(0, 0, 0);
+
+        // ==================== 灯光 ====================
+        // 环境光 - 微弱的绿色
+        const ambientLight = new THREE.AmbientLight('#0a2a18', 0.6);
+        scene.add(ambientLight);
+
+        // 顶部点光源 - 丁达尔效应的光源
+        const topLight = new THREE.PointLight('#00ff88', 80, 18, 1.5);
+        topLight.position.set(0, 5.5, 1);
+        scene.add(topLight);
+
+        // 辅助顶部光源（更柔和）
+        const topLight2 = new THREE.PointLight('#00cc66', 30, 14, 2);
+        topLight2.position.set(-2, 5, -1);
+        scene.add(topLight2);
+
+        const topLight3 = new THREE.PointLight('#00ff99', 25, 12, 2);
+        topLight3.position.set(2.5, 4.8, -0.5);
+        scene.add(topLight3);
+
+        // ==================== 粒子系统 ====================
+        const PARTICLE_COUNT = 350;
+        const particleGeometry = new THREE.BufferGeometry();
+        const particlePositions = new Float32Array(PARTICLE_COUNT * 3);
+        const particleColors = new Float32Array(PARTICLE_COUNT * 3);
+        const particleSizes = new Float32Array(PARTICLE_COUNT);
+        const particleVelocities = new Float32Array(PARTICLE_COUNT * 3); // 存储速度用于物理
+        const particleBaseY = new Float32Array(PARTICLE_COUNT); // 存储基准Y用于翻腾
+
+        // 绿色调色板
+        const greenPalette = [
+            new THREE.Color('#00ff88'), // 荧光绿
+            new THREE.Color('#00e676'), // 亮绿
+            new THREE.Color('#00cc66'), // 中绿
+            new THREE.Color('#33ffaa'), // 浅绿
+            new THREE.Color('#00ff99'), // 青绿
+            new THREE.Color('#88ffcc'), // 淡绿
+            new THREE.Color('#00b855'), // 深绿
+            new THREE.Color('#55ffbb'), // 薄荷绿
         ];
-        const SEARCH_ENGINES = {
-            bing: 'https://www.bing.com/search?q=',
-            yandex: 'https://yandex.com/search/?text=',
-            baidu: 'https://www.baidu.com/s?wd='
-        };
-        let currentEngine = 'bing';
-        let links = [];
-        let deleteTimers = {};
 
-        function init() {
-            loadConfig();
-            renderLinks();
-            bindEvents();
-            startRealTime();
-            initParticles();
-            loadBgSetting();
-        }
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            // 球形分布 + 一些聚集在光束区域
+            let x, y, z;
+            const r = Math.random();
 
-        function loadConfig() {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                const config = JSON.parse(saved);
-                links = config.links || [...DEFAULT_LINKS];
-                currentEngine = config.engine || 'bing';
+            if (r < 0.35) {
+                // 在光束区域附近（x在-1.5到1.5，y在-3到4）
+                x = (Math.random() - 0.5) * 3.5;
+                y = (Math.random() - 0.3) * 7;
+                z = (Math.random() - 0.5) * 4;
             } else {
-                links = [...DEFAULT_LINKS];
+                // 广泛分布
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI * 0.7;
+                const radius = 3 + Math.random() * 5;
+                x = radius * Math.sin(phi) * Math.cos(theta);
+                y = radius * Math.cos(phi) * 0.7 + (Math.random() - 0.5) * 3;
+                z = radius * Math.sin(phi) * Math.sin(theta) * 0.8;
             }
-            document.getElementById('engineBtn').textContent = currentEngine + ' ▾';
+
+            particlePositions[i * 3] = x;
+            particlePositions[i * 3 + 1] = y;
+            particlePositions[i * 3 + 2] = z;
+            particleBaseY[i] = y;
+
+            // 颜色
+            const color = greenPalette[Math.floor(Math.random() * greenPalette.length)].clone();
+            const brightness = 0.5 + Math.random() * 0.5;
+            color.r *= brightness;
+            color.g *= brightness;
+            color.b *= brightness;
+            particleColors[i * 3] = color.r;
+            particleColors[i * 3 + 1] = color.g;
+            particleColors[i * 3 + 2] = color.b;
+
+            // 大小 - 光束中的粒子稍大
+            const inBeam = Math.abs(x) < 1.8 && y < 4.5 && y > -3;
+            particleSizes[i] = inBeam ? (0.04 + Math.random() * 0.1) : (0.015 + Math.random() * 0.05);
+
+            // 初始速度
+            particleVelocities[i * 3] = (Math.random() - 0.5) * 0.015;
+            particleVelocities[i * 3 + 1] = (Math.random() - 0.5) * 0.02;
+            particleVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.01;
         }
 
-        function saveConfig() {
-            const config = {
-                links,
-                engine: currentEngine
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+        particleGeometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+        particleGeometry.setAttribute('size', new THREE.BufferAttribute(particleSizes, 1));
+
+        // 创建圆形粒子贴图
+        const particleCanvas = document.createElement('canvas');
+        particleCanvas.width = 64;
+        particleCanvas.height = 64;
+        const pctx = particleCanvas.getContext('2d');
+        const gradient = pctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+        gradient.addColorStop(0, 'rgba(255,255,255,1)');
+        gradient.addColorStop(0.08, 'rgba(200,255,220,0.9)');
+        gradient.addColorStop(0.25, 'rgba(100,255,180,0.5)');
+        gradient.addColorStop(0.5, 'rgba(0,200,120,0.12)');
+        gradient.addColorStop(0.75, 'rgba(0,100,60,0.02)');
+        gradient.addColorStop(1, 'rgba(0,0,0,0)');
+        pctx.fillStyle = gradient;
+        pctx.fillRect(0, 0, 64, 64);
+        const particleTexture = new THREE.CanvasTexture(particleCanvas);
+        particleTexture.needsUpdate = true;
+
+        const particleMaterial = new THREE.PointsMaterial({
+            size: 0.15,
+            map: particleTexture,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            depthTest: true,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.85,
+        });
+
+        const particles = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(particles);
+
+        // ==================== 丁达尔光束 (Tyndall Beams) ====================
+        const beamsGroup = new THREE.Group();
+        scene.add(beamsGroup);
+
+        const beamDefs = [
+            { x: 0, z: 0.3, width: 0.55, height: 8.5, angle: 2, opacity: 0.09, color: '#00ff88' },
+            { x: -0.9, z: -0.2, width: 0.35, height: 7.8, angle: -3, opacity: 0.06, color: '#00ee77' },
+            { x: 0.8, z: -0.5, width: 0.4, height: 8.2, angle: 1.5, opacity: 0.07, color: '#00ff99' },
+            { x: -0.4, z: 0.8, width: 0.28, height: 7.5, angle: -1.8, opacity: 0.05, color: '#33ffaa' },
+            { x: 0.5, z: -0.9, width: 0.32, height: 7.0, angle: 2.5, opacity: 0.055, color: '#00dd77' },
+        ];
+
+        const beamMeshes = [];
+        const beamInnerMeshes = [];
+
+        beamDefs.forEach((def) => {
+            // 主光柱
+            const beamGeo = new THREE.BoxGeometry(def.width, def.height, def.width * 0.7);
+            const beamMat = new THREE.MeshBasicMaterial({
+                color: new THREE.Color(def.color),
+                transparent: true,
+                opacity: def.opacity,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                depthTest: true,
+            });
+            const beam = new THREE.Mesh(beamGeo, beamMat);
+            beam.position.set(def.x, def.height / 2 - 1.2, def.z);
+            beam.rotation.z = THREE.MathUtils.degToRad(def.angle);
+            beam.userData = {
+                baseX: def.x,
+                baseZ: def.z,
+                baseRotZ: def.angle,
+                width: def.width,
+                height: def.height,
+                phase: Math.random() * Math.PI * 2,
             };
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-        }
+            beamsGroup.add(beam);
+            beamMeshes.push(beam);
 
-        // 链接新标签页打开
-        function renderLinks() {
-            const container = document.getElementById('linksContainer');
-            container.innerHTML = '';
-            links.forEach((link, index) => {
-                const item = document.createElement('a');
-                item.className = 'link-item';
-                item.dataset.index = index;
-                item.href = link.url;
-                item.target = "_blank";
-                item.innerHTML = `
-                    ${link.text}
-                    <button class="link-delete-btn" data-index="${index}">删除</button>
-                `;
-                item.addEventListener('mouseenter', () => handleLinkHover(index));
-                item.addEventListener('mouseleave', () => handleLinkLeave(index));
-                container.appendChild(item);
+            // 内部更细更亮的光柱
+            const innerGeo = new THREE.BoxGeometry(def.width * 0.35, def.height * 0.9, def.width * 0.3);
+            const innerMat = new THREE.MeshBasicMaterial({
+                color: new THREE.Color('#88ffcc'),
+                transparent: true,
+                opacity: def.opacity * 1.6,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                depthTest: true,
             });
-            const addBtn = document.createElement('div');
-            addBtn.className = 'add-link-btn';
-            addBtn.textContent = '+';
-            addBtn.addEventListener('click', () => {
-                document.getElementById('addModal').classList.add('active');
+            const innerBeam = new THREE.Mesh(innerGeo, innerMat);
+            innerBeam.position.copy(beam.position);
+            innerBeam.rotation.z = beam.rotation.z;
+            innerBeam.userData = { ...beam.userData };
+            beamsGroup.add(innerBeam);
+            beamInnerMeshes.push(innerBeam);
+        });
+
+        // ==================== 萤火虫粒子（光束内漂浮的大粒子） ====================
+        const fireflyCount = 60;
+        const fireflyGeometry = new THREE.BufferGeometry();
+        const fireflyPositions = new Float32Array(fireflyCount * 3);
+        const fireflyData = []; // 存储每个萤火虫的轨迹数据
+
+        for (let i = 0; i < fireflyCount; i++) {
+            // 萤火虫主要在光束体积内
+            const beamIdx = Math.floor(Math.random() * beamDefs.length);
+            const bd = beamDefs[beamIdx];
+            const x = bd.x + (Math.random() - 0.5) * bd.width * 1.6;
+            const y = (Math.random() * bd.height) - 1.2;
+            const z = bd.z + (Math.random() - 0.5) * bd.width * 1.2;
+
+            fireflyPositions[i * 3] = x;
+            fireflyPositions[i * 3 + 1] = y;
+            fireflyPositions[i * 3 + 2] = z;
+
+            fireflyData.push({
+                baseX: x,
+                baseY: y,
+                baseZ: z,
+                beamIdx,
+                phase: Math.random() * Math.PI * 2,
+                speed: 0.3 + Math.random() * 0.9,
+                amplitude: 0.2 + Math.random() * 0.7,
+                driftX: (Math.random() - 0.5) * 0.3,
+                driftY: 0.15 + Math.random() * 0.5,
+                driftZ: (Math.random() - 0.5) * 0.3,
             });
-            container.appendChild(addBtn);
-            document.querySelectorAll('.link-delete-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const index = parseInt(btn.dataset.index);
-                    deleteLink(index);
-                });
-            });
         }
 
-        function handleLinkHover(index) {
-            deleteTimers[index] = setTimeout(() => {
-                const btn = document.querySelector(`.link-item[data-index="${index}"] .link-delete-btn`);
-                if (btn) btn.style.display = 'block';
-            }, 5000);
-        }
+        fireflyGeometry.setAttribute('position', new THREE.BufferAttribute(fireflyPositions, 3));
 
-        function handleLinkLeave(index) {
-            clearTimeout(deleteTimers[index]);
-            const btn = document.querySelector(`.link-item[data-index="${index}"] .link-delete-btn`);
-            if (btn) btn.style.display = 'none';
-        }
+        // 萤火虫使用更亮的贴图
+        const ffCanvas = document.createElement('canvas');
+        ffCanvas.width = 32;
+        ffCanvas.height = 32;
+        const ffctx = ffCanvas.getContext('2d');
+        const ffGrad = ffctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+        ffGrad.addColorStop(0, 'rgba(255,255,255,1)');
+        ffGrad.addColorStop(0.04, 'rgba(180,255,210,1)');
+        ffGrad.addColorStop(0.15, 'rgba(0,255,136,0.7)');
+        ffGrad.addColorStop(0.4, 'rgba(0,180,100,0.2)');
+        ffGrad.addColorStop(0.7, 'rgba(0,80,40,0.03)');
+        ffGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        ffctx.fillStyle = ffGrad;
+        ffctx.fillRect(0, 0, 32, 32);
+        const ffTexture = new THREE.CanvasTexture(ffCanvas);
 
-        function deleteLink(index) {
-            links.splice(index, 1);
-            saveConfig();
-            renderLinks();
-        }
+        const fireflyMaterial = new THREE.PointsMaterial({
+            size: 0.25,
+            map: ffTexture,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            depthTest: true,
+            color: new THREE.Color('#ccffee'),
+            transparent: true,
+            opacity: 0.9,
+        });
 
-        function addLink(text, url) {
-            links.push({ text, url });
-            saveConfig();
-            renderLinks();
-        }
+        const fireflies = new THREE.Points(fireflyGeometry, fireflyMaterial);
+        scene.add(fireflies);
 
-        function bindEvents() {
-            document.getElementById('engineBtn').addEventListener('click', () => {
-                document.getElementById('engineDropdown').classList.toggle('active');
-            });
-            document.querySelectorAll('.engine-option').forEach(option => {
-                option.addEventListener('click', () => {
-                    currentEngine = option.dataset.engine;
-                    document.getElementById('engineBtn').textContent = currentEngine + ' ▾';
-                    document.getElementById('engineDropdown').classList.remove('active');
-                    saveConfig();
-                });
-            });
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('.engine-selector')) {
-                    document.getElementById('engineDropdown').classList.remove('active');
+        // ==================== 顶部光源可视化 ====================
+        const lightSourceGeo = new THREE.SphereGeometry(0.25, 32, 32);
+        const lightSourceMat = new THREE.MeshBasicMaterial({
+            color: '#ffffff',
+            transparent: true,
+            opacity: 0.9,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+        });
+        const lightSource = new THREE.Mesh(lightSourceGeo, lightSourceMat);
+        lightSource.position.copy(topLight.position);
+        scene.add(lightSource);
+
+        // 光源光晕
+        const glowGeo = new THREE.SphereGeometry(0.7, 32, 32);
+        const glowMat = new THREE.MeshBasicMaterial({
+            color: '#88ffcc',
+            transparent: true,
+            opacity: 0.35,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+        });
+        const glowSphere = new THREE.Mesh(glowGeo, glowMat);
+        glowSphere.position.copy(topLight.position);
+        scene.add(glowSphere);
+
+        // 第二层光晕
+        const glowGeo2 = new THREE.SphereGeometry(1.3, 32, 32);
+        const glowMat2 = new THREE.MeshBasicMaterial({
+            color: '#44dd99',
+            transparent: true,
+            opacity: 0.12,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+        });
+        const glowSphere2 = new THREE.Mesh(glowGeo2, glowMat2);
+        glowSphere2.position.copy(topLight.position);
+        scene.add(glowSphere2);
+
+        // ==================== 场景中的微尘环 ====================
+        const dustRingGeo = new THREE.TorusGeometry(2.8, 0.015, 16, 120);
+        const dustRingMat = new THREE.MeshBasicMaterial({
+            color: '#00ff88',
+            transparent: true,
+            opacity: 0.2,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+        });
+        const dustRing = new THREE.Mesh(dustRingGeo, dustRingMat);
+        dustRing.position.set(0, -0.5, -1);
+        dustRing.rotation.x = THREE.MathUtils.degToRad(70);
+        scene.add(dustRing);
+
+        const dustRing2Geo = new THREE.TorusGeometry(2.2, 0.01, 16, 100);
+        const dustRing2Mat = new THREE.MeshBasicMaterial({
+            color: '#55ffbb',
+            transparent: true,
+            opacity: 0.15,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+        });
+        const dustRing2 = new THREE.Mesh(dustRing2Geo, dustRing2Mat);
+        dustRing2.position.set(0, -0.3, -0.6);
+        dustRing2.rotation.x = THREE.MathUtils.degToRad(55);
+        dustRing2.rotation.y = THREE.MathUtils.degToRad(15);
+        scene.add(dustRing2);
+
+        // ==================== 鼠标在3D空间中的映射 ====================
+        const raycaster = new THREE.Raycaster();
+        const interactionPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -3); // z=-3平面
+
+        function updateMouseWorld() {
+            const ndc = new THREE.Vector2(
+                (mouse.x / window.innerWidth) * 2 - 1,
+                -(mouse.y / window.innerHeight) * 2 + 1
+            );
+            raycaster.setFromCamera(new THREE.Vector3(ndc.x, ndc.y, 0.5).unproject(camera).sub(camera.position)
+                .normalize(), camera);
+            // 使用raycaster与z=-3附近的平面求交
+            const rayOrigin = camera.position.clone();
+            const rayDir = new THREE.Vector3(ndc.x, ndc.y, 0.5).unproject(camera).sub(camera.position).normalize();
+            const target = new THREE.Vector3();
+            raycaster.set(rayOrigin, rayDir);
+            const intersectPoint = new THREE.Vector3();
+            const planeNormal = new THREE.Vector3(0, 0, 1);
+            const planePoint = new THREE.Vector3(0, 0, -3);
+            const denom = rayDir.dot(planeNormal);
+            if (Math.abs(denom) > 0.0001) {
+                const t = planePoint.clone().sub(rayOrigin).dot(planeNormal) / denom;
+                if (t > 0) {
+                    intersectPoint.copy(rayOrigin).add(rayDir.clone().multiplyScalar(t));
+                    mouse.worldX = intersectPoint.x;
+                    mouse.worldY = intersectPoint.y;
+                    mouse.worldZ = intersectPoint.z;
                 }
-            });
-            document.getElementById('searchBtn').addEventListener('click', () => {
-                const query = document.getElementById('searchInput').value.trim();
-                if (query) {
-                    const url = SEARCH_ENGINES[currentEngine] + encodeURIComponent(query);
-                    window.open(url, '_blank');
-                }
-            });
-            document.getElementById('searchInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') document.getElementById('searchBtn').click();
-            });
-            document.getElementById('cancelAddBtn').addEventListener('click', () => {
-                document.getElementById('addModal').classList.remove('active');
-                document.getElementById('linkTextInput').value = '';
-                document.getElementById('linkUrlInput').value = '';
-            });
-            document.getElementById('saveAddBtn').addEventListener('click', () => {
-                const text = document.getElementById('linkTextInput').value.trim();
-                const url = document.getElementById('linkUrlInput').value.trim();
-                if (text && url) {
-                    addLink(text, url);
-                    document.getElementById('addModal').classList.remove('active');
-                }
-            });
-
-            // 渐变背景面板
-            document.getElementById('wallpaperBtn').addEventListener('click',()=>{
-                document.getElementById('bgPanel').classList.toggle('show');
-            });
-            document.getElementById('angleRange').addEventListener('input',e=>{
-                document.getElementById('angleNum').innerText = e.target.value;
-            });
-            document.getElementById('saveBgBtn').addEventListener('click',saveBg);
-        }
-
-        // 渐变背景保存全局生效
-        function saveBg(){
-            let c1 = document.getElementById('color1').value;
-            let c2 = document.getElementById('color2').value;
-            let ang = document.getElementById('angleRange').value;
-            document.body.style.background = `linear-gradient(${ang}deg,${c1},${c2})`;
-            localStorage.setItem('bgColor1',c1);
-            localStorage.setItem('bgColor2',c2);
-            localStorage.setItem('bgAngle',ang);
-            document.getElementById('bgPanel').classList.remove('show');
-        }
-        function loadBgSetting(){
-            let c1 = localStorage.getItem('bgColor1')||'#e0eafc';
-            let c2 = localStorage.getItem('bgColor2')||'#cfdef3';
-            let ang = localStorage.getItem('bgAngle')||135;
-            document.getElementById('color1').value = c1;
-            document.getElementById('color2').value = c2;
-            document.getElementById('angleRange').value = ang;
-            document.getElementById('angleNum').innerText = ang;
-            document.body.style.background = `linear-gradient(${ang}deg,${c1},${c2})`;
-        }
-
-        // 实时时间
-        function startRealTime() {
-            function updateTime() {
-                const now = new Date();
-                const timeStr = now.toLocaleString('zh-CN',{
-                    year:'numeric',month:'2-digit',day:'2-digit',
-                    hour:'2-digit',minute:'2-digit',second:'2-digit'
-                });
-                document.getElementById('currentTime').textContent = timeStr;
             }
-            updateTime();
-            setInterval(updateTime,1000);
         }
 
-        // 鼠标粒子特效
-        function initParticles() {
-            const canvas = document.getElementById('particles-canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            const particles = [];
-            const mouse = {x:null,y:null};
-            window.addEventListener('resize',()=>{
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-            });
-            document.addEventListener('mousemove',e=>{
-                mouse.x = e.clientX;
-                mouse.y = e.clientY;
-                if(Math.random()>0.4){
-                    particles.push({
-                        x:mouse.x,y:mouse.y,
-                        size:Math.random()*3+1,
-                        sx:(Math.random()-0.5)*2,
-                        sy:(Math.random()-0.5)*2,
-                        life:100
-                    });
-                }
-            });
-            function animate(){
-                ctx.clearRect(0,0,canvas.width,canvas.height);
-                for(let i=0;i<particles.length;i++){
-                    let p = particles[i];
-                    p.x += p.sx;
-                    p.y += p.sy;
-                    p.life--;
-                    p.size *=0.98;
-                    if(p.life<=0||p.size<0.1){
-                        particles.splice(i,1);i--;continue;
+        // ==================== 动画循环 ====================
+        const clock = new THREE.Clock();
+        let timeAccum = 0;
+
+        function animate(timestamp) {
+            requestAnimationFrame(animate);
+
+            const dt = Math.min(clock.getDelta(), 0.1);
+            timeAccum += dt;
+
+            // 平滑鼠标
+            mouse.x += (mouse.tx - mouse.x) * 0.25;
+            mouse.y += (mouse.ty - mouse.y) * 0.25;
+            updateMouseWorld();
+
+            // 更新光标DOM
+            cursorGlow.style.left = mouse.x + 'px';
+            cursorGlow.style.top = mouse.y + 'px';
+            cursorTrail.style.left = mouse.x + 'px';
+            cursorTrail.style.top = mouse.y + 'px';
+            cursorDot.style.left = mouse.x + 'px';
+            cursorDot.style.top = mouse.y + 'px';
+
+            // 鼠标移动速度影响光晕大小
+            const dx = mouse.x - mousePrev.x;
+            const dy = mouse.y - mousePrev.y;
+            const speed = Math.sqrt(dx * dx + dy * dy);
+            const glowSize = 180 + Math.min(speed * 2.5, 80);
+            cursorGlow.style.width = glowSize + 'px';
+            cursorGlow.style.height = glowSize + 'px';
+            cursorGlow.style.opacity = 0.7 + Math.min(speed * 0.015, 0.3);
+
+            // 更新粒子
+            const posArray = particles.geometry.attributes.position.array;
+            const sizeArray = particles.geometry.attributes.size.array;
+
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const idx = i * 3;
+                let px = posArray[idx];
+                let py = posArray[idx + 1];
+                let pz = posArray[idx + 2];
+
+                // 翻腾运动
+                const phase1 = i * 0.37 + timeAccum * 1.3;
+                const phase2 = i * 0.73 + timeAccum * 0.8;
+                const phase3 = i * 0.53 + timeAccum * 1.1;
+
+                const waveX = Math.sin(phase1) * 0.35 + Math.cos(phase2) * 0.2;
+                const waveY = Math.cos(phase3) * 0.5 + Math.sin(phase1 * 0.7) * 0.35;
+                const waveZ = Math.cos(phase2) * 0.25 + Math.sin(phase3 * 0.8) * 0.3;
+
+                // 目标位置（基准位置+波动）
+                const baseY = particleBaseY[i];
+                const targetX = px + waveX * dt * 0.6;
+                const targetY = baseY + waveY;
+                const targetZ = pz + waveZ * dt * 0.6;
+
+                // 平滑移动到目标
+                posArray[idx] += (targetX - px) * 2.5 * dt;
+                posArray[idx + 1] += (targetY - py) * 1.8 * dt;
+                posArray[idx + 2] += (targetZ - pz) * 2.5 * dt;
+
+                // 鼠标吸引力
+                const mx = mouse.worldX || 0;
+                const my = mouse.worldY || 0;
+                const mz = mouse.worldZ || -3;
+                const distToMouse = Math.sqrt(
+                    (posArray[idx] - mx) ** 2 +
+                    (posArray[idx + 1] - my) ** 2 +
+                    (posArray[idx + 2] - mz) ** 2
+                );
+
+                const attractionRadius = 2.8;
+                if (distToMouse < attractionRadius && distToMouse > 0.01) {
+                    const force = (1 - distToMouse / attractionRadius) * 2.5;
+                    const dirX = (mx - posArray[idx]) / distToMouse;
+                    const dirY = (my - posArray[idx + 1]) / distToMouse;
+                    const dirZ = (mz - posArray[idx + 2]) / distToMouse;
+                    posArray[idx] += dirX * force * dt;
+                    posArray[idx + 1] += dirY * force * dt;
+                    posArray[idx + 2] += dirZ * force * dt;
+
+                    // 靠近鼠标的粒子变亮变大
+                    if (distToMouse < 1.5) {
+                        sizeArray[i] = Math.min(sizeArray[i] + dt * 0.04, 0.18);
                     }
-                    ctx.beginPath();
-                    ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
-                    ctx.fillStyle = `rgba(0,102,204,${p.life/100})`;
-                    ctx.fill();
                 }
-                requestAnimationFrame(animate);
+
+                // 粒子大小衰减回原始值
+                const inBeam = Math.abs(posArray[idx]) < 1.8 && posArray[idx + 1] < 4.5 && posArray[idx + 1] > -3;
+                const baseSize = inBeam ? (0.04 + Math.random() * 0.06) : (0.015 + Math.random() * 0.03);
+                sizeArray[i] += (baseSize - sizeArray[i]) * 0.8 * dt;
+
+                // 边界约束
+                const boundX = 7,
+                    boundY = 5,
+                    boundZ = 5;
+                if (Math.abs(posArray[idx]) > boundX) posArray[idx] *= 0.98;
+                if (Math.abs(posArray[idx + 1]) > boundY) posArray[idx + 1] *= 0.98;
+                if (Math.abs(posArray[idx + 2]) > boundZ) posArray[idx + 2] *= 0.98;
             }
-            animate();
+            particles.geometry.attributes.position.needsUpdate = true;
+            particles.geometry.attributes.size.needsUpdate = true;
+
+            // 更新萤火虫
+            const ffPosArray = fireflies.geometry.attributes.position.array;
+            for (let i = 0; i < fireflyCount; i++) {
+                const fd = fireflyData[i];
+                const idx = i * 3;
+                const fy = fd.baseY + Math.sin(timeAccum * fd.speed + fd.phase) * fd.amplitude;
+                const fx = fd.baseX + Math.cos(timeAccum * fd.speed * 0.7 + fd.phase) * fd.driftX;
+                const fz = fd.baseZ + Math.sin(timeAccum * fd.speed * 0.6 + fd.phase + 1) * fd.driftZ;
+                ffPosArray[idx] += (fx - ffPosArray[idx]) * 3 * dt;
+                ffPosArray[idx + 1] += (fy - ffPosArray[idx + 1]) * 2.5 * dt;
+                ffPosArray[idx + 2] += (fz - ffPosArray[idx + 2]) * 3 * dt;
+
+                // 萤火虫也受鼠标影响
+                const mxf = mouse.worldX || 0;
+                const myf = mouse.worldY || 0;
+                const mzf = mouse.worldZ || -3;
+                const fdist = Math.sqrt((ffPosArray[idx] - mxf) ** 2 + (ffPosArray[idx + 1] - myf) ** 2 + (ffPosArray[
+                    idx + 2] - mzf) ** 2);
+                if (fdist < 2.5 && fdist > 0.01) {
+                    const fforce = (1 - fdist / 2.5) * 1.8;
+                    ffPosArray[idx] += (mxf - ffPosArray[idx]) / fdist * fforce * dt;
+                    ffPosArray[idx + 1] += (myf - ffPosArray[idx + 1]) / fdist * fforce * dt;
+                    ffPosArray[idx + 2] += (mzf - ffPosArray[idx + 2]) / fdist * fforce * dt;
+                }
+            }
+            fireflies.geometry.attributes.position.needsUpdate = true;
+
+            // 光束微动
+            beamMeshes.forEach((beam, i) => {
+                const ud = beam.userData;
+                const wobble = Math.sin(timeAccum * 0.7 + ud.phase) * 0.6;
+                const wobble2 = Math.cos(timeAccum * 0.55 + ud.phase) * 0.4;
+                beam.rotation.z = THREE.MathUtils.degToRad(ud.baseRotZ + wobble);
+                beam.rotation.x = THREE.MathUtils.degToRad(wobble2 * 0.5);
+                beam.position.x = ud.baseX + Math.sin(timeAccum * 0.5 + ud.phase) * 0.2;
+                beam.material.opacity = ud.baseOpacity || beam.material.opacity;
+                // 微调透明度
+                const baseOp = beamDefs[i]?.opacity || 0.06;
+                beam.material.opacity = baseOp + Math.sin(timeAccum * 1.2 + ud.phase) * 0.015;
+            });
+            beamInnerMeshes.forEach((beam, i) => {
+                if (beamMeshes[i]) {
+                    beam.position.copy(beamMeshes[i].position);
+                    beam.rotation.z = beamMeshes[i].rotation.z;
+                    beam.rotation.x = beamMeshes[i].rotation.x;
+                }
+            });
+
+            // 光晕呼吸
+            const breathe = 1 + Math.sin(timeAccum * 0.8) * 0.2 + Math.sin(timeAccum * 1.3) * 0.1;
+            glowSphere.scale.setScalar(breathe);
+            glowSphere2.scale.setScalar(breathe * 1.1);
+            lightSource.material.opacity = 0.75 + Math.sin(timeAccum * 1.5) * 0.2;
+            topLight.intensity = 70 + Math.sin(timeAccum * 0.9) * 15;
+
+            // 尘埃环旋转
+            dustRing.rotation.z += dt * 0.12;
+            dustRing2.rotation.z -= dt * 0.08;
+            dustRing2.rotation.x += dt * 0.05;
+
+            // 渲染
+            renderer.render(scene, camera);
+
+            // 更新前一帧鼠标
+            mousePrev.x = mouse.x;
+            mousePrev.y = mouse.y;
         }
-        init();
+
+        // ==================== 导航函数 ====================
+        window.navigateTo = function(name, url) {
+            // 涟漪效果
+            const ripple = document.createElement('div');
+            ripple.style.cssText = `position:fixed;left:${mouse.x}px;top:${mouse.y}px;width:0;height:0;border-radius:50%;background:rgba(0,255,136,0.5);transform:translate(-50%,-50%);pointer-events:none;z-index:10001;animation:rippleOut 0.7s ease-out forwards;`;
+            document.body.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 750);
+
+            // 提示 toast
+            const toast = document.createElement('div');
+            toast.style.cssText = `position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:rgba(8,22,16,0.9);border:1px solid rgba(0,255,136,0.6);color:#e0fff0;padding:14px 28px;border-radius:30px;font-size:0.9rem;letter-spacing:0.05em;z-index:10002;pointer-events:none;animation:toastIn 0.4s ease-out,toastOut 0.4s 1.8s ease-in forwards;box-shadow:0 8px 30px rgba(0,0,0,0.5),0 0 20px rgba(0,255,136,0.25);`;
+            toast.textContent = `🚀 即将前往：${name}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2400);
+
+            // 2.5秒后跳转
+            setTimeout(() => { window.open(url, '_blank'); }, 2500);
+        };
+
+        // ==================== 数据加载（仅云端） ====================
+        const APPWRITE_CFG = {
+            endpoint: 'https://sgp.cloud.appwrite.io/v1',
+            projectId: '6a145cf60028dc5a5f2e',
+            databaseId: '6a15bc4f001c0e264832',
+            collectionId: 'k-seetion'
+        };
+
+        // 安全渲染面板链接到 DOM
+        function renderPanelLinks(type, data) {
+            const container = document.getElementById(type + '-links');
+            if (!container) return;
+            const items = (data && data[type]) ? data[type] : [];
+            if (items.length === 0) {
+                container.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--text-dim);grid-column:1/-1;"><div style="font-size:2rem;margin-bottom:10px;">📭</div><div>暂无数据，请到后台添加</div></div>`;
+            } else {
+                container.innerHTML = items.map(item => `
+                    <div class="modal-link-item" onclick="navigateTo('${(item.name||'').replace(/'/g,"\\'")}','${(item.url||'').replace(/'/g,"\\'")}')">
+                        <span class="item-icon">${item.icon || '🔗'}</span>
+                        <div class="item-info">
+                            <div class="item-name">${item.name || ''}</div>
+                            <div class="item-desc">${item.desc || ''}</div>
+                        </div>
+                        <div class="item-arrow"></div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // 云端加载（任何错误都静默返回 null，绝不抛异常）
+        async function fetchCloudData() {
+            const url = `${APPWRITE_CFG.endpoint}/databases/${APPWRITE_CFG.databaseId}/collections/${APPWRITE_CFG.collectionId}/documents`;
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 5000);
+            try {
+                const res = await fetch(url, {
+                    headers: { 'X-Appwrite-Project': APPWRITE_CFG.projectId },
+                    signal: controller.signal
+                });
+                clearTimeout(timer);
+                if (!res.ok) return null;
+                const json = await res.json();
+                if (!json || !Array.isArray(json.documents)) return null;
+                const kanban = [], tools = [];
+                for (const d of json.documents) {
+                    const item = { icon: d.icon || '', name: d.name || '', desc: d.desc || '', url: d.url || '', sort: d.sort || 1 };
+                    if (d.type === 'kanban') kanban.push(item);
+                    else if (d.type === 'tools') tools.push(item);
+                }
+                kanban.sort((a, b) => a.sort - b.sort);
+                tools.sort((a, b) => a.sort - b.sort);
+                return { kanban, tools };
+            } catch (_) {
+                clearTimeout(timer);
+                return null;
+            }
+        }
+
+        // 显示错误状态
+        function showLoadError(type) {
+            const container = document.getElementById(type + '-links');
+            if (container) {
+                container.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--text-dim);grid-column:1/-1;"><div style="font-size:2rem;margin-bottom:10px;">⚠️</div><div>云端数据加载失败</div><div style="font-size:0.75rem;margin-top:6px;opacity:0.6;">请检查网络或 Appwrite 配置</div></div>`;
+            }
+        }
+
+        // ==================== 弹窗控制 ====================
+        window.openModal = function(type) {
+            // 1. 立即打开弹窗
+            const modal = document.getElementById('modal-' + type);
+            if (modal) modal.classList.add('active');
+            const container = document.getElementById(type + '-links');
+            if (container) container.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--text-dim);grid-column:1/-1;"><div>⏳ 加载中...</div></div>`;
+
+            // 2. 只从云端加载
+            (async () => {
+                const data = await fetchCloudData();
+                if (data) {
+                    renderPanelLinks(type, data);
+                } else {
+                    showLoadError(type);
+                }
+            })();
+        };
+
+        window.closeModal = function(type) {
+            const modal = document.getElementById('modal-' + type);
+            if (modal) modal.classList.remove('active');
+        };
+
+        // 注入涟漪动画样式
+        const styleSheet = document.createElement('style');
+        styleSheet.textContent = `
+            @keyframes rippleOut {
+                0% { width: 0; height: 0; opacity: 0.8; }
+                100% { width: 300px; height: 300px; opacity: 0; }
+            }
+            @keyframes toastIn {
+                0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+                100% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            }
+            @keyframes toastOut {
+                0% { opacity: 1; }
+                100% { opacity: 0; transform: translateX(-50%) translateY(-15px); }
+            }
+        `;
+        document.head.appendChild(styleSheet);
+
+        // ==================== 响应式处理 ====================
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+        });
+
+        // ==================== 弹窗交互 ====================
+        // 点击遮罩关闭
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) overlay.classList.remove('active');
+            });
+        });
+
+        // ==================== 键盘快捷键 ====================
+        window.addEventListener('keydown', (e) => {
+            // ESC 关闭弹窗
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+                return;
+            }
+            // 数字键1-5 快速点击卡片
+            const cards = document.querySelectorAll('.sign-card');
+            let targetIndex = -1;
+            switch (e.key) {
+                case '1': targetIndex = 0; break;
+                case '2': targetIndex = 1; break;
+                case '3': targetIndex = 2; break;
+                case '4': targetIndex = 3; break;
+                case '5': targetIndex = 4; break;
+                default: return;
+            }
+            if (targetIndex >= 0 && targetIndex < cards.length) {
+                cards[targetIndex].click();
+                cards[targetIndex].style.transform = 'translateY(-10px) scale(0.95)';
+                setTimeout(() => {
+                    cards[targetIndex].style.transform = '';
+                }, 200);
+            }
+        });
+
+        // ==================== 启动 ====================
+        // 初始设置鼠标位置在屏幕中央
+        mouse.tx = window.innerWidth / 2;
+        mouse.ty = window.innerHeight / 2;
+        mouse.x = mouse.tx;
+        mouse.y = mouse.ty;
+        updateMouseWorld();
+
+        // 开始动画
+        requestAnimationFrame(animate);
+
+        // ==================== 导出调试接口 ====================
+        console.log('🌿 公司内部导航指路牌已就绪');
+        console.log('   - 丁达尔光束: 5条动态光柱');
+        console.log('   - 翻腾粒子:', PARTICLE_COUNT, '个');
+        console.log('   - 萤火虫粒子:', fireflyCount, '个');
+        console.log('   - 鼠标交互: 吸引粒子 + 光晕');
+        console.log('   - 快捷键: 按1-4快速导航');
+        console.log('   ✦ 移动鼠标探索粒子世界吧 ✦');
     </script>
 </body>
 </html>

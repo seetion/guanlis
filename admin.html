@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>后台管理 - 贵州希田</title>
+    <style>
+        :root {
+            --bg: #050a08; --green-neon: #00ff88; --green-mid: #00cc6a;
+            --green-deep: #007a3d; --text: #d0f0e0; --text-dim: #8ab8a0;
+            --card-bg: rgba(8,22,16,0.85); --border-glow: rgba(0,255,136,0.5);
+            --danger: #ff4444; --input-bg: rgba(0,20,10,0.8);
+        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{background:var(--bg);font-family:'PingFang SC','Microsoft YaHei',sans-serif;color:var(--text);min-height:100vh;}
+
+        .login-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column}
+        .login-overlay.hidden{display:none}
+        .login-box{background:var(--card-bg);border:1.5px solid var(--border-glow);border-radius:20px;padding:40px 36px;width:420px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.6),0 0 40px rgba(0,255,136,0.15)}
+        .login-box .icon{font-size:3rem;margin-bottom:12px}
+        .login-box h2{color:#e0fff0;font-size:1.4rem;letter-spacing:0.05em;margin-bottom:6px}
+        .login-box .hint{color:var(--text-dim);font-size:0.75rem;margin-bottom:22px;line-height:1.5}
+        .login-box input{width:100%;padding:12px 16px;background:var(--input-bg);border:1px solid rgba(0,255,136,0.3);border-radius:10px;color:#e0fff0;font-size:0.9rem;outline:none;transition:border-color 0.25s;margin-bottom:16px;letter-spacing:0.05em}
+        .login-box input:focus{border-color:var(--green-neon);box-shadow:0 0 12px rgba(0,255,136,0.15)}
+        .login-box input::placeholder{color:rgba(0,255,136,0.2)}
+        .login-box button{width:100%;padding:14px;background:linear-gradient(135deg,var(--green-mid),var(--green-deep));border:none;border-radius:10px;color:#fff;font-size:1rem;font-weight:600;cursor:pointer;letter-spacing:0.08em;transition:all 0.3s;box-shadow:0 4px 20px rgba(0,255,136,0.2)}
+        .login-box button:hover{background:linear-gradient(135deg,var(--green-neon),var(--green-mid));box-shadow:0 6px 30px rgba(0,255,136,0.35)}
+        .login-box button:disabled{opacity:0.5;cursor:not-allowed}
+
+        .admin-container{max-width:1100px;margin:0 auto;padding:24px 20px}
+        .admin-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid rgba(0,255,136,0.2);flex-wrap:wrap;gap:12px}
+        .admin-header h1{font-size:1.3rem;color:#e0fff0;letter-spacing:0.05em;display:flex;align-items:center;gap:10px}
+        .admin-header h1 .icon{font-size:1.5rem}
+        .header-actions{display:flex;gap:8px;align-items:center}
+        .btn-back,.btn-refresh{padding:8px 16px;background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);border-radius:8px;color:var(--green-neon);cursor:pointer;font-size:0.85rem;transition:all 0.25s;text-decoration:none;display:inline-block}
+        .btn-back:hover,.btn-refresh:hover{background:rgba(0,255,136,0.2)}
+        .btn-refresh.loading{pointer-events:none;opacity:0.6}
+
+        .tabs{display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid rgba(0,255,136,0.1)}
+        .tab{padding:12px 28px;cursor:pointer;color:var(--text-dim);font-size:0.95rem;font-weight:500;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.25s;letter-spacing:0.03em}
+        .tab:hover{color:var(--green-neon)}
+        .tab.active{color:var(--green-neon);border-bottom-color:var(--green-neon)}
+
+        .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+        .toolbar .count{color:var(--text-dim);font-size:0.8rem}
+        .btn-add{padding:10px 22px;background:linear-gradient(135deg,var(--green-mid),var(--green-deep));border:none;border-radius:8px;color:#fff;font-size:0.85rem;font-weight:600;cursor:pointer;letter-spacing:0.04em;transition:all 0.3s}
+        .btn-add:hover{background:linear-gradient(135deg,var(--green-neon),var(--green-mid))}
+
+        .table-wrap{background:rgba(8,22,16,0.6);border:1px solid rgba(0,255,136,0.2);border-radius:12px;overflow-x:auto}
+        table{width:100%;border-collapse:collapse;min-width:700px}
+        th{text-align:left;padding:14px 16px;color:var(--green-neon);font-size:0.78rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;border-bottom:1px solid rgba(0,255,136,0.15);background:rgba(0,255,136,0.03)}
+        td{padding:12px 16px;font-size:0.88rem;border-bottom:1px solid rgba(0,255,136,0.06);color:var(--text);vertical-align:middle}
+        tr:hover td{background:rgba(0,255,136,0.03)}
+        .col-icon{width:60px;text-align:center;font-size:1.3rem}
+        .col-sort{width:60px;text-align:center}
+        .col-actions{width:120px;text-align:center}
+
+        .btn-edit,.btn-del{padding:5px 12px;border-radius:6px;border:none;font-size:0.75rem;cursor:pointer;margin:0 3px;transition:all 0.2s;display:inline-flex;align-items:center;gap:4px}
+        .btn-edit{background:rgba(0,255,136,0.15);color:var(--green-neon);border:1px solid rgba(0,255,136,0.3)}
+        .btn-edit:hover{background:rgba(0,255,136,0.25)}
+        .btn-del{background:rgba(255,68,68,0.1);color:var(--danger);border:1px solid rgba(255,68,68,0.3)}
+        .btn-del:hover{background:rgba(255,68,68,0.2)}
+        .btn-edit:disabled,.btn-del:disabled{opacity:0.4;pointer-events:none}
+
+        .empty-state,.loading-state{text-align:center;padding:48px 20px;color:var(--text-dim)}
+        .empty-state .icon,.loading-state .icon{font-size:2.5rem;margin-bottom:10px}
+
+        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,8,5,0.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;visibility:hidden;transition:all 0.3s}
+        .modal-overlay.active{opacity:1;visibility:visible}
+        .modal-box{background:linear-gradient(145deg,rgba(10,28,18,0.98),rgba(5,15,10,0.99));border:1.5px solid var(--border-glow);border-radius:16px;padding:30px;width:480px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.6);transform:translateY(20px);transition:transform 0.3s}
+        .modal-overlay.active .modal-box{transform:translateY(0)}
+        .modal-box h3{color:#e0fff0;font-size:1.1rem;margin-bottom:20px;letter-spacing:0.04em}
+        .form-group{margin-bottom:16px}
+        .form-group label{display:block;font-size:0.78rem;color:var(--text-dim);margin-bottom:6px;letter-spacing:0.05em}
+        .form-group input{width:100%;padding:10px 14px;background:var(--input-bg);border:1px solid rgba(0,255,136,0.25);border-radius:8px;color:#e0fff0;font-size:0.9rem;outline:none;transition:border-color 0.25s}
+        .form-group input:focus{border-color:var(--green-neon)}
+        .form-row{display:flex;gap:12px}.form-row .form-group{flex:1}
+        .form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:24px}
+        .btn-save{padding:10px 28px;background:linear-gradient(135deg,var(--green-mid),var(--green-deep));border:none;border-radius:8px;color:#fff;font-size:0.88rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+        .btn-save:disabled{opacity:0.5;pointer-events:none}
+        .btn-cancel{padding:10px 20px;background:rgba(255,255,255,0.05);border:1px solid rgba(0,255,136,0.2);border-radius:8px;color:var(--text-dim);font-size:0.85rem;cursor:pointer}
+
+        .toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:20px;font-size:0.85rem;z-index:2000;animation:toastIn 0.3s ease-out;pointer-events:none}
+        .toast.success{background:rgba(0,255,136,0.15);border:1px solid var(--green-neon);color:var(--green-neon)}
+        .toast.error{background:rgba(255,68,68,0.15);border:1px solid var(--danger);color:var(--danger)}
+        @keyframes toastIn{0%{opacity:0;transform:translateX(-50%) translateY(-10px)}100%{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+        @media(max-width:600px){.admin-container{padding:16px 12px}.form-row{flex-direction:column;gap:0}.modal-box{padding:20px}.login-box{width:90vw;padding:28px 24px}}
+    </style>
+</head>
+<body>
+
+    <!-- 登录页 -->
+    <div class="login-overlay" id="login-overlay">
+        <div class="login-box">
+            <div class="icon">🔐</div>
+            <h2>后台管理系统</h2>
+            <p class="hint">请输入 Appwrite API Key 进入管理面板</p>
+            <input type="password" id="login-pwd" placeholder="管理员口令" autofocus>
+            <input type="text" id="login-apikey" placeholder="Appwrite API Key">
+            <button onclick="doLogin()" id="login-btn">登 录</button>
+        </div>
+    </div>
+
+    <!-- 主面板 -->
+    <div class="admin-container" id="admin-panel">
+        <div class="admin-header">
+            <h1><span class="icon">⚙️</span>面板配置管理</h1>
+            <div class="header-actions">
+                <button class="btn-back" onclick="openPwdModal()">🔑 改口令</button>
+                <button class="btn-refresh" onclick="refreshData()" id="btn-refresh">🔄 刷新</button>
+                <a href="index.html" class="btn-back">← 返回首页</a>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="kanban" onclick="switchTab('kanban')">🚀 数据看板</div>
+            <div class="tab" data-tab="tools" onclick="switchTab('tools')">🛠 常用工具</div>
+        </div>
+
+        <div class="toolbar">
+            <span class="count" id="item-count">共 0 条</span>
+            <button class="btn-add" onclick="openEditor()">+ 新增链接</button>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-icon">图标</th>
+                        <th>名称</th>
+                        <th>描述</th>
+                        <th>链接 URL</th>
+                        <th class="col-sort">排序</th>
+                        <th class="col-actions">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body"></tbody>
+            </table>
+            <div class="loading-state" id="loading-state"><div class="icon">⏳</div><div>加载中...</div></div>
+            <div class="empty-state" id="empty-state" style="display:none"><div class="icon">📭</div><div>暂无数据，点击上方按钮添加</div></div>
+        </div>
+    </div>
+
+    <!-- 编辑弹窗 -->
+    <div class="modal-overlay" id="editor-modal">
+        <div class="modal-box">
+            <h3 id="editor-title">新增链接</h3>
+            <div class="form-row">
+                <div class="form-group"><label>图标 (Emoji)</label><input type="text" id="editor-icon" placeholder="如 🚀" maxlength="4"></div>
+                <div class="form-group"><label>排序序号</label><input type="number" id="editor-sort" placeholder="越小越前" value="1" min="1"></div>
+            </div>
+            <div class="form-group"><label>名称</label><input type="text" id="editor-name" placeholder="链接名称"></div>
+            <div class="form-group"><label>描述</label><input type="text" id="editor-desc" placeholder="简短描述（可选）"></div>
+            <div class="form-group"><label>链接 URL</label><input type="text" id="editor-url" placeholder="https://..."></div>
+            <div class="form-actions">
+                <button class="btn-cancel" onclick="closeEditor()">取消</button>
+                <button class="btn-save" id="btn-save" onclick="saveItem()">💾 保存到云端</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 改密码弹窗 -->
+    <div class="modal-overlay" id="pwd-modal">
+        <div class="modal-box">
+            <h3>🔑 修改管理口令</h3>
+            <div class="form-group"><label>新口令</label><input type="text" id="new-pwd" placeholder="输入新口令"></div>
+            <div class="form-actions">
+                <button class="btn-cancel" onclick="closePwdModal()">取消</button>
+                <button class="btn-save" id="btn-save-pwd" onclick="savePassword()">💾 保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== Appwrite 配置 ====================
+        const CFG = {
+            endpoint: 'https://sgp.cloud.appwrite.io/v1',
+            projectId: '6a145cf60028dc5a5f2e',
+            databaseId: '6a15bc4f001c0e264832',
+            collectionId: 'k-seetion'
+        };
+        const DOC_URL = `${CFG.endpoint}/databases/${CFG.databaseId}/collections/${CFG.collectionId}/documents`;
+
+        let apiKey = '';
+        let currentTab = 'kanban';
+        let panelData = { kanban: [], tools: [] };
+        let editingDocId = null;
+
+        // ==================== 登录（密码从云端读，API框是幌子） ====================
+        async function doLogin() {
+            const pwd = document.getElementById('login-pwd').value;
+            const keyInput = document.getElementById('login-apikey').value.trim();
+            const btn = document.getElementById('login-btn');
+            btn.disabled = true; btn.textContent = '验证中...';
+
+            // API 框有内容 = 假的，一律提示密码错误
+            if (keyInput !== '') {
+                btn.disabled = false; btn.textContent = '登 录';
+                showToast('密码错误', 'error'); return;
+            }
+
+            // 从云端读取密码和真实 API Key
+            let storedPwd = '', realApiKey = '';
+            try {
+                const url = `${CFG.endpoint}/databases/${CFG.databaseId}/collections/${CFG.collectionId}/documents/settings_pwd`;
+                const res = await fetch(url, { headers: { 'X-Appwrite-Project': CFG.projectId } });
+                if (res.ok) {
+                    const doc = await res.json();
+                    storedPwd = doc.password || '';
+                    realApiKey = doc.apikey || '';
+                }
+            } catch (_) {}
+
+            btn.disabled = false; btn.textContent = '登 录';
+
+            if (!storedPwd || pwd !== storedPwd) {
+                showToast('密码错误', 'error'); return;
+            }
+
+            // 登录成功，用云端存储的真实 API Key 做增删改
+            apiKey = realApiKey;
+            showToast('登录成功 ✅', 'success');
+            document.getElementById('login-overlay').classList.add('hidden');
+            refreshData();
+        }
+
+        document.getElementById('login-pwd').addEventListener('keydown', e => {
+            if (e.key === 'Enter') document.getElementById('login-apikey').focus();
+        });
+        document.getElementById('login-apikey').addEventListener('keydown', e => {
+            if (e.key === 'Enter') doLogin();
+        });
+
+        // ==================== Toast ====================
+        function showToast(msg, type = 'success') {
+            const t = document.createElement('div');
+            t.className = 'toast ' + type;
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2500);
+        }
+
+        // ==================== 云端 API 封装 ====================
+        function apiHeaders(write = false) {
+            const h = { 'Content-Type': 'application/json', 'X-Appwrite-Project': CFG.projectId };
+            if (write && apiKey) h['X-Appwrite-Key'] = apiKey;
+            return h;
+        }
+
+        async function cloudList() {
+            const res = await fetch(DOC_URL, { headers: apiHeaders(false) });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const json = await res.json();
+            return (json.documents || []).map(d => ({
+                id: d.$id,
+                icon: d.icon || '', name: d.name || '', desc: d.desc || '',
+                url: d.url || '', sort: d.sort || 1, type: d.type || ''
+            }));
+        }
+
+        function genId() {
+            return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+        }
+
+        async function cloudCreate(data) {
+            if (!apiKey) throw new Error('缺少 API Key，无法写入');
+            const docId = genId();
+            const res = await fetch(DOC_URL, {
+                method: 'POST',
+                headers: apiHeaders(true),
+                body: JSON.stringify({ documentId: docId, data })
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                console.error('创建失败:', errText);
+                throw new Error('HTTP ' + res.status + ': ' + errText);
+            }
+            return await res.json();
+        }
+
+        async function cloudUpdate(docId, data) {
+            if (!apiKey) throw new Error('缺少 API Key，无法更新');
+            const res = await fetch(`${DOC_URL}/${docId}`, {
+                method: 'PATCH',
+                headers: apiHeaders(true),
+                body: JSON.stringify({ data })
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return await res.json();
+        }
+
+        async function cloudDelete(docId) {
+            if (!apiKey) throw new Error('缺少 API Key，无法删除');
+            const res = await fetch(`${DOC_URL}/${docId}`, {
+                method: 'DELETE',
+                headers: apiHeaders(true)
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+        }
+
+        // ==================== 数据加载 ====================
+        async function refreshData() {
+            const btn = document.getElementById('btn-refresh');
+            btn.classList.add('loading');
+            btn.textContent = '⏳ 加载中...';
+            document.getElementById('loading-state').style.display = 'block';
+            document.getElementById('empty-state').style.display = 'none';
+
+            try {
+                const docs = await cloudList();
+                panelData.kanban = docs.filter(d => d.type === 'kanban').sort((a, b) => (parseInt(a.sort)||0) - (parseInt(b.sort)||0));
+                panelData.tools = docs.filter(d => d.type === 'tools').sort((a, b) => (parseInt(a.sort)||0) - (parseInt(b.sort)||0));
+                document.getElementById('loading-state').style.display = 'none';
+                renderTable();
+                showToast('✅ 云端数据已刷新', 'success');
+            } catch (e) {
+                document.getElementById('loading-state').style.display = 'none';
+                showToast('❌ 云端加载失败: ' + e.message, 'error');
+                renderTable();
+            } finally {
+                btn.classList.remove('loading');
+                btn.textContent = '🔄 从云端刷新';
+            }
+        }
+
+        // ==================== 标签页 ====================
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+            editingDocId = null;
+            renderTable();
+        }
+
+        // ==================== 表格 ====================
+        function renderTable() {
+            const data = panelData[currentTab] || [];
+            document.getElementById('item-count').textContent = `共 ${data.length} 条`;
+            const tbody = document.getElementById('table-body');
+            const empty = document.getElementById('empty-state');
+
+            if (data.length === 0) {
+                tbody.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+            tbody.innerHTML = data.map((item, idx) => `
+                <tr>
+                    <td class="col-icon">${item.icon || '🔗'}</td>
+                    <td>${he(item.name)}</td>
+                    <td style="color:var(--text-dim);font-size:0.8rem">${he(item.desc || '-')}</td>
+                    <td style="font-size:0.78rem;word-break:break-all">${he(item.url || '-')}</td>
+                    <td class="col-sort">${item.sort || 1}</td>
+                    <td class="col-actions">
+                        <button class="btn-edit" onclick="openEditor(${idx})" ${!apiKey?'disabled title="需要 API Key"':''}>✏️</button>
+                        <button class="btn-del" onclick="deleteItem(${idx})" ${!apiKey?'disabled title="需要 API Key"':''}>🗑</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function he(s) {
+            const d = document.createElement('div');
+            d.textContent = s || '';
+            return d.innerHTML;
+        }
+
+        // ==================== 编辑弹窗 ====================
+        function openEditor(index = -1) {
+            if (!apiKey) { showToast('请先填写 API Key 才能编辑', 'error'); return; }
+            const data = panelData[currentTab] || [];
+            if (index >= 0) {
+                const item = data[index];
+                editingDocId = item.id;
+                document.getElementById('editor-title').textContent = '编辑链接';
+                document.getElementById('editor-icon').value = item.icon || '';
+                document.getElementById('editor-name').value = item.name || '';
+                document.getElementById('editor-desc').value = item.desc || '';
+                document.getElementById('editor-url').value = item.url || '';
+                document.getElementById('editor-sort').value = item.sort || 1;
+            } else {
+                editingDocId = null;
+                document.getElementById('editor-title').textContent = '新增链接';
+                document.getElementById('editor-icon').value = '';
+                document.getElementById('editor-name').value = '';
+                document.getElementById('editor-desc').value = '';
+                document.getElementById('editor-url').value = '';
+                document.getElementById('editor-sort').value = getNextSort();
+            }
+            document.getElementById('editor-modal').classList.add('active');
+            setTimeout(() => document.getElementById('editor-name').focus(), 100);
+        }
+
+        function closeEditor() {
+            document.getElementById('editor-modal').classList.remove('active');
+            editingDocId = null;
+        }
+
+        function getNextSort() {
+            return (panelData[currentTab] || []).reduce((max, d) => Math.max(max, parseInt(d.sort) || 0, 0), 0) + 1;
+        }
+
+        async function saveItem() {
+            const btn = document.getElementById('btn-save');
+            const icon = document.getElementById('editor-icon').value.trim();
+            const name = document.getElementById('editor-name').value.trim();
+            const desc = document.getElementById('editor-desc').value.trim();
+            const url = document.getElementById('editor-url').value.trim();
+            const sortNum = parseInt(document.getElementById('editor-sort').value) || 1;
+
+            if (!name) { showToast('请输入名称', 'error'); return; }
+            if (!icon) { showToast('请输入图标', 'error'); return; }
+            if (!url) { showToast('请输入链接 URL', 'error'); return; }
+
+            const data = { type: currentTab, icon, name, desc, url, sort: String(sortNum) };
+            btn.disabled = true;
+            btn.textContent = '⏳ 保存中...';
+
+            try {
+                if (editingDocId) {
+                    await cloudUpdate(editingDocId, data);
+                    showToast('✅ 已更新到云端', 'success');
+                } else {
+                    await cloudCreate(data);
+                    showToast('✅ 已新增到云端', 'success');
+                }
+                closeEditor();
+                await refreshData();
+            } catch (e) {
+                showToast('❌ 保存失败: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '💾 保存到云端';
+            }
+        }
+
+        async function deleteItem(index) {
+            if (!apiKey) { showToast('需要 API Key', 'error'); return; }
+            const item = panelData[currentTab][index];
+            if (!item) return;
+            if (!confirm(`确定删除"${item.name}"吗？此操作不可撤销。`)) return;
+
+            try {
+                await cloudDelete(item.id);
+                showToast('✅ 已从云端删除', 'success');
+                await refreshData();
+            } catch (e) {
+                showToast('❌ 删除失败: ' + e.message, 'error');
+            }
+        }
+
+        // ==================== 改密码 ====================
+        function openPwdModal() {
+            document.getElementById('new-pwd').value = '';
+            document.getElementById('pwd-modal').classList.add('active');
+        }
+        function closePwdModal() {
+            document.getElementById('pwd-modal').classList.remove('active');
+        }
+        async function savePassword() {
+            const pwd = document.getElementById('new-pwd').value.trim();
+            if (!pwd) { showToast('口令不能为空', 'error'); return; }
+            const btn = document.getElementById('btn-save-pwd');
+            btn.disabled = true; btn.textContent = '⏳...';
+            try {
+                const url = `${CFG.endpoint}/databases/${CFG.databaseId}/collections/${CFG.collectionId}/documents/settings_pwd`;
+                const res = await fetch(url, {
+                    method: 'PATCH',
+                    headers: apiHeaders(true),
+                    body: JSON.stringify({ data: { password: pwd } })
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                showToast('✅ 口令已更新', 'success');
+                closePwdModal();
+            } catch (e) {
+                showToast('❌ 更新失败: ' + e.message, 'error');
+            }
+            btn.disabled = false; btn.textContent = '💾 保存';
+        }
+
+        // ==================== 交互 ====================
+        document.getElementById('pwd-modal').addEventListener('click', function(e) { if (e.target === this) closePwdModal(); });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (document.getElementById('editor-modal').classList.contains('active')) closeEditor();
+                if (document.getElementById('pwd-modal').classList.contains('active')) closePwdModal();
+            }
+        });
+
+        console.log('⚙️ 后台管理系统已就绪（直连 Appwrite 云端）');
+    </script>
+</body>
+</html>
