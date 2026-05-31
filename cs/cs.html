@@ -1,0 +1,2529 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>希田智慧 丨 蚕室数据监控看板</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background: #05101f;
+            color: #e8f4ff;
+            padding: 15px;
+            min-height: 100vh;
+            background-image: radial-gradient(circle at 50% 50%, #0f2744 0%, #05101f 100%);
+            zoom: 0.85;
+        }
+
+        /* 隐藏滚动条 */
+        ::-webkit-scrollbar { display: none; }
+        * {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        /* 顶部导航栏 */
+        .top-header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 120, 255, 0.1);
+            border: 1px solid rgba(0, 180, 255, 0.3);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 15px;
+        }
+
+        .header-title {
+            font-size: 28px;
+            color: #00d8ff;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px rgba(0,216,255,0.2);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .header-logo {
+            width: 42px;
+            height: 42px;
+            border-radius: 8px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 8px rgba(0,216,255,0.3));
+        }
+
+        .export-btn {
+            background: rgba(0,216,255,0.12);
+            color: #00d8ff;
+            border: 1px solid rgba(0,216,255,0.3);
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            font-family: inherit;
+            margin-left: auto;
+        }
+        .export-btn:hover {
+            background: rgba(0,216,255,0.22);
+            border-color: #00d8ff;
+            box-shadow: 0 0 8px rgba(0,216,255,0.3);
+        }
+
+        /* ========== 后台管理面板 ========== */
+        .admin-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.75);
+            z-index: 9999;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 30px;
+            overflow-y: auto;
+        }
+        .admin-overlay.show { display: flex; }
+
+        .admin-panel {
+            background: #0a1a30;
+            border: 1px solid rgba(0,216,255,0.3);
+            border-radius: 12px;
+            width: 1100px;
+            max-width: 95vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 24px 28px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.6);
+        }
+        .admin-panel h3 { color: #00d8ff; font-size: 20px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+        .admin-panel h3 .fa-cog { font-size: 18px; }
+        .admin-close {
+            margin-left: auto;
+            background: none; border: 1px solid rgba(255,255,255,0.15); color: #8aaccc;
+            border-radius: 6px; padding: 4px 12px; cursor: pointer; font-size: 14px;
+        }
+        .admin-close:hover { border-color: #ff5555; color: #ff5555; }
+
+        .admin-toolbar {
+            display: flex; gap: 12px; margin-bottom: 16px; align-items: center;
+        }
+        .admin-btn {
+            background: rgba(0,216,255,0.12); color: #00d8ff; border: 1px solid rgba(0,216,255,0.25);
+            padding: 7px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s;
+        }
+        .admin-btn:hover { background: rgba(0,216,255,0.22); border-color: #00d8ff; }
+        .admin-btn.danger { color: #ff5555; border-color: rgba(255,85,85,0.25); background: rgba(255,85,85,0.08); }
+        .admin-btn.danger:hover { background: rgba(255,85,85,0.18); border-color: #ff5555; }
+        .admin-btn.small { padding: 4px 10px; font-size: 11px; }
+
+        .admin-table {
+            width: 100%; border-collapse: collapse; font-size: 12px;
+        }
+        .admin-table th {
+            background: rgba(0,150,255,0.1); color: #7ea8c8; font-weight: 500;
+            padding: 8px 8px; text-align: left; border-bottom: 1px solid rgba(0,180,255,0.15);
+            white-space: nowrap;
+        }
+        .admin-table td {
+            padding: 6px 8px; border-bottom: 1px solid rgba(0,180,255,0.06);
+            color: #b8d4f0;
+        }
+        .admin-table tr:hover td { background: rgba(0,180,255,0.05); }
+        .admin-table .dev-toggle {
+            cursor: pointer; transition: all 0.15s; padding: 2px 4px; border-radius: 4px;
+        }
+        .admin-table .dev-toggle:hover { background: rgba(0,216,255,0.15); }
+        .admin-table .dev-toggle.on  { color: #00d8ff; text-shadow: 0 0 5px rgba(0,216,255,0.5); }
+        .admin-table .dev-toggle.off { color: #3a5878; }
+        .admin-table .dev-toggle.err { color: #ff5555; text-shadow: 0 0 5px rgba(255,85,85,0.5); }
+
+        /* 编辑弹窗 */
+        .edit-modal {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000;
+            justify-content: center; align-items: flex-start; padding-top: 20px; overflow-y: auto;
+        }
+        .edit-modal.show { display: flex; }
+        .edit-form {
+            background: #0d2240; border: 1px solid rgba(0,216,255,0.3); border-radius: 12px;
+            width: 800px; max-width: 95vw; padding: 24px; max-height: 88vh; overflow-y: auto;
+        }
+        .edit-form h4 { color: #00d8ff; margin-bottom: 12px; font-size: 16px; }
+        .edit-form label { display: block; color: #7ea8c8; font-size: 11px; margin-top: 6px; margin-bottom: 2px; }
+        .edit-form input, .edit-form select, .edit-form textarea {
+            width: 100%; padding: 6px 10px; border-radius: 5px; border: 1px solid rgba(0,180,255,0.2);
+            background: #07152a; color: #d0e8ff; font-size: 13px; font-family: inherit;
+        }
+        .edit-form input:focus, .edit-form select:focus, .edit-form textarea:focus {
+            outline: none; border-color: #00d8ff;
+        }
+        .edit-form textarea { resize: vertical; min-height: 40px; }
+        .edit-form .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
+        .edit-form .form-row.col3 { grid-template-columns: 1fr 1fr 1fr; }
+        .edit-form .form-section { margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(0,180,255,0.08); }
+        .edit-form .form-section:last-child { border-bottom: none; }
+        .edit-form .section-title { color: #00d8ff; font-size: 13px; font-weight: bold; margin-bottom: 6px; }
+        .form-section.s1 { background: rgba(0,120,220,0.08); border-radius: 8px; padding: 10px 12px; }
+        .form-section.s2 { background: rgba(0,180,200,0.08); border-radius: 8px; padding: 10px 12px; }
+        .form-section.s3 { background: rgba(57,255,153,0.06); border-radius: 8px; padding: 10px 12px; }
+        .form-section.s4 { background: rgba(255,160,40,0.06); border-radius: 8px; padding: 10px 12px; }
+        .form-section.s5 { background: rgba(180,130,255,0.06); border-radius: 8px; padding: 10px 12px; }
+        .form-section.s6 { background: rgba(0,210,180,0.06); border-radius: 8px; padding: 10px 12px; }
+        .form-section.s7 { background: rgba(255,100,120,0.06); border-radius: 8px; padding: 10px 12px; }
+        .edit-form .form-section { margin-bottom: 10px; border-bottom: none; }
+        .edit-form .btn-row { display: flex; gap: 10px; margin-top: 14px; justify-content: flex-end; }
+
+        /* 主布局 左+中+右 */
+        .main-wrap {
+            display: grid;
+            grid-template-columns: 240px 1fr 260px;
+            gap: 15px;
+            height: calc(100vh - 140px);
+        }
+
+        /* 左侧：蚕室列表区 */
+        .left-panel {
+            background: linear-gradient(180deg, rgba(0,120,255,0.08) 0%, rgba(0,60,140,0.05) 100%);
+            border: 1px solid rgba(0, 180, 255, 0.22);
+            border-radius: 12px;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .panel-subtitle {
+            font-size: 15px;
+            font-weight: 600;
+            color: #00d8ff;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 180, 255, 0.15);
+            letter-spacing: 0.5px;
+        }
+
+        .room-item {
+            background: linear-gradient(135deg, rgba(0,80,180,0.10), rgba(0,50,130,0.08));
+            border: 1px solid rgba(0, 180, 255, 0.16);
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .room-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: rgba(0, 216, 255, 0.15);
+            border-radius: 3px 0 0 3px;
+            transition: all 0.3s;
+        }
+
+        .room-item:hover {
+            border-color: rgba(0, 216, 255, 0.45);
+            background: linear-gradient(135deg, rgba(0,150,255,0.16), rgba(0,80,180,0.14));
+            transform: translateX(4px);
+            box-shadow: 0 4px 16px rgba(0,120,200,0.12);
+        }
+        .room-item:hover::before { background: #00d8ff; box-shadow: 0 0 8px rgba(0,216,255,0.4); }
+
+        .room-item.active {
+            border-color: #00d8ff;
+            background: linear-gradient(135deg, rgba(0,200,255,0.18), rgba(0,120,220,0.16));
+            box-shadow: 0 0 18px rgba(0,216,255,0.2), inset 0 0 20px rgba(0,216,255,0.04);
+            transform: translateX(4px);
+        }
+        .room-item.active::before { background: #00d8ff; box-shadow: 0 0 10px rgba(0,216,255,0.6); }
+
+        /* 卡片名称行 */
+        .room-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .room-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: #d8ecff;
+        }
+
+        .room-status-dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .room-status-dot.normal  { background: #39ff99; box-shadow: 0 0 4px #39ff99; }
+        .room-status-dot.warn    { background: #ffdd44; box-shadow: 0 0 4px #ffdd44; }
+        .room-status-dot.error   { background: #ff5555; box-shadow: 0 0 4px #ff5555; }
+        .room-status-dot.offline { background: #5a6a7a; box-shadow: none; }
+        .room-item .room-name.offline { color: #5a6a7a !important; }
+
+        /* 分隔线 */
+        .room-divider {
+            height: 1px;
+            background: rgba(0, 180, 255, 0.12);
+            margin: 4px 0;
+        }
+
+        /* 温湿度行 */
+        .room-env-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 12px;
+            color: #a0c8e8;
+            padding: 2px 0;
+        }
+        .room-env-row .env-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .room-env-row .env-icon { font-size: 12px; color: #5a9ec8; }
+        .room-env-row .env-val  { color: #d0e8ff; font-weight: bold; font-size:13px; }
+
+        /* 底部设备图标栏 */
+        .room-device-bar {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 3px 0 0 0;
+            font-size: 13px;
+        }
+        .room-device-bar .dev-icon {
+            opacity: 0.25;
+            transition: all 0.2s;
+        }
+        .room-device-bar .dev-icon.on {
+            opacity: 1;
+            color: #00d8ff;
+            text-shadow: 0 0 5px rgba(0, 216, 255, 0.5);
+        }
+        .room-device-bar .dev-icon.on.warn {
+            color: #ffdd44;
+            text-shadow: 0 0 5px rgba(255, 221, 68, 0.5);
+        }
+        .room-device-bar .dev-icon.on.error {
+            color: #ff5555;
+            text-shadow: 0 0 5px rgba(255, 85, 85, 0.5);
+        }
+
+        .fan-spin { animation: spin 2s linear infinite; }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* 中间C位 主详情面板 */
+        .center-main {
+            background: rgba(0, 120, 255, 0.06);
+            border: 1px solid rgba(0, 180, 255, 0.25);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+        .center-main::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0,216,255,0.5), transparent);
+        }
+
+        .main-title {
+            font-size: 22px;
+            color: #00d8ff;
+            text-align: center;
+            margin-bottom: 6px;
+            padding-bottom: 12px;
+            letter-spacing: 1px;
+            text-shadow: 0 0 20px rgba(0,216,255,0.25);
+            position: relative;
+        }
+        .main-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 200px; height: 1px;
+            background: linear-gradient(90deg, transparent, #00d8ff, transparent);
+        }
+
+        /* 状态摘要条 */
+        .status-summary {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 18px;
+            padding: 10px 24px;
+            background: rgba(0,150,255,0.08);
+            border-radius: 8px;
+            border: 1px solid rgba(0,180,255,0.15);
+        }
+        .summary-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #a0c8e8;
+        }
+        .summary-dot {
+            width: 9px; height: 9px;
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+        .summary-dot.ok      { background: #39ff99; box-shadow: 0 0 8px rgba(57,255,153,0.5); }
+        .summary-dot.warn    { background: #ffdd44; box-shadow: 0 0 8px rgba(255,221,68,0.5); animation-delay: 0.3s; }
+        .summary-dot.err     { background: #ff5555; box-shadow: 0 0 8px rgba(255,85,85,0.5); animation-delay: 0.6s; }
+        .summary-dot.offline { background: #6a7a8a; box-shadow: none; }
+        @keyframes pulse-dot {
+            0%,100% { opacity: 1; transform: scale(1); }
+            50%     { opacity: 0.5; transform: scale(1.3); }
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: 1fr 1fr;
+            gap: 12px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* ========== 美化后的详情卡片 ========== */
+        .detail-card {
+            background: linear-gradient(135deg, rgba(0,100,200,0.10), rgba(0,60,140,0.15));
+            border: 1px solid rgba(0,180,255,0.18);
+            border-radius: 12px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            gap: 3px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: default;
+        }
+        .detail-card::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle at 30% 20%, rgba(0,216,255,0.04), transparent 60%);
+            transition: all 0.4s;
+            pointer-events: none;
+        }
+        .detail-card:hover {
+            border-color: rgba(0,216,255,0.45);
+            background: linear-gradient(135deg, rgba(0,140,255,0.16), rgba(0,80,180,0.2));
+            box-shadow: 0 8px 32px rgba(0,150,255,0.12), inset 0 1px 0 rgba(0,216,255,0.1);
+            transform: translateY(-2px);
+        }
+        .detail-card:hover::before {
+            background: radial-gradient(circle at 30% 20%, rgba(0,216,255,0.08), transparent 60%);
+        }
+        /* 卡片左上角装饰点 */
+        .detail-card::after {
+            content: '';
+            position: absolute;
+            top: 10px; left: 10px;
+            width: 4px; height: 4px;
+            border-radius: 50%;
+            background: rgba(0,216,255,0.5);
+            transition: all 0.3s;
+        }
+        .detail-card:hover::after {
+            box-shadow: 0 0 12px rgba(0,216,255,0.6);
+            background: #00d8ff;
+        }
+
+        .card-head {
+            font-size: 17px;
+            font-weight: 600;
+            color: #00d8ff;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.5px;
+            position: relative;
+            z-index: 1;
+        }
+        .card-head .head-icon {
+            width: 28px; height: 28px;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            position: relative;
+        }
+        .head-icon.env    { background: linear-gradient(135deg, rgba(0,200,255,0.2), rgba(0,120,255,0.1)); color: #00d8ff; }
+        .head-icon.feed   { background: linear-gradient(135deg, rgba(57,255,153,0.2), rgba(0,180,100,0.1)); color: #39ff99; }
+        .head-icon.manage { background: linear-gradient(135deg, rgba(255,180,0,0.2), rgba(200,140,0,0.1)); color: #ffb400; }
+        .head-icon.health { background: linear-gradient(135deg, rgba(200,130,255,0.2), rgba(130,80,200,0.1)); color: #c882ff; }
+        .head-icon.monitor { background: linear-gradient(135deg, rgba(255,120,60,0.2), rgba(220,80,30,0.1)); color: #ff7840; }
+        .head-icon.batch  { background: linear-gradient(135deg, rgba(0,210,180,0.2), rgba(0,150,130,0.1)); color: #00d2b4; }
+
+        .head-icon::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 9px;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.08), transparent);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        .card-head .head-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 8px;
+            margin-left: auto;
+            letter-spacing: 0.5px;
+        }
+        .badge-normal  { background: rgba(57,255,153,0.15); color: #39ff99; border: 1px solid rgba(57,255,153,0.3); }
+        .badge-warn    { background: rgba(255,221,68,0.15); color: #ffdd44; border: 1px solid rgba(255,221,68,0.3); }
+        .badge-error   { background: rgba(255,85,85,0.15); color: #ff5555; border: 1px solid rgba(255,85,85,0.3); }
+        .badge-offline { background: rgba(100,120,140,0.15); color: #7a8a9a; border: 1px solid rgba(100,120,140,0.3); }
+
+        /* ========== 数据行美化 ========== */
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            font-size: 15px;
+            border-radius: 6px;
+            margin-bottom: 1px;
+            position: relative;
+            z-index: 1;
+            transition: background 0.2s;
+        }
+        .data-row:hover {
+            background: rgba(0,180,255,0.08);
+        }
+        /* 斑马纹：偶数行略深 */
+        .data-row:nth-child(even) {
+            background: rgba(0,0,0,0.12);
+        }
+        .data-row .row-label {
+            color: #b8d4f0;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-weight: 500;
+        }
+        .data-row .row-label i {
+            font-size: 13px;
+            opacity: 0.85;
+            width: 16px;
+            text-align: center;
+        }
+        .data-row .row-value {
+            color: #e8f4ff;
+            font-weight: 500;
+            text-align: right;
+        }
+        .data-row .row-value.val-normal { color: #39ff99; }
+        .data-row .row-value.val-warn   { color: #ffdd44; }
+        .data-row .row-value.val-error  { color: #ff5555; }
+
+        /* 分隔线改为柔和渐变 */
+        .data-divider {
+            height: 1px;
+            margin: 3px 0;
+            background: linear-gradient(90deg, transparent, rgba(0,180,255,0.2), transparent);
+        }
+
+        /* 卡片内部分组小标题 */
+        .section-label {
+            font-size: 13px;
+            color: #5a9ec8;
+            padding: 2px 8px;
+            margin: 0;
+            letter-spacing: 1px;
+            border-left: 2px solid rgba(0,180,255,0.3);
+        }
+
+        /* ========== 迷你进度条 ========== */
+        .mini-gauge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 8px;
+            background: rgba(0,0,0,0.15);
+            border-radius: 6px;
+            margin-bottom: 4px;
+            position: relative;
+            z-index: 1;
+        }
+        .mini-gauge .gauge-bar {
+            flex: 1;
+            height: 6px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+        .mini-gauge .gauge-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 1s ease;
+            position: relative;
+        }
+        .gauge-fill.normal { background: linear-gradient(90deg, #39ff99, #00d8ff); box-shadow: 0 0 8px rgba(57,255,153,0.3); }
+        .gauge-fill.warn   { background: linear-gradient(90deg, #ffdd44, #ffaa00); box-shadow: 0 0 8px rgba(255,221,68,0.3); }
+        .gauge-fill.error  { background: linear-gradient(90deg, #ff5555, #ff3366); box-shadow: 0 0 8px rgba(255,85,85,0.3); }
+        .mini-gauge .gauge-label {
+            font-size: 12px;
+            color: #94c8e8;
+            min-width: 55px;
+            text-align: right;
+            font-weight: 500;
+        }
+
+        /* ========== 喂养卡片专用 ========== */
+        .feed-inline-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            background: rgba(0,0,0,0.08);
+        }
+        .feed-inline-row .inline-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            color: #b8d4f0;
+        }
+        .feed-inline-row .inline-item i { color: #5a9ec8; font-size: 13px; }
+        .feed-inline-row .inline-val {
+            color: #e8f4ff;
+            font-weight: bold;
+            font-size: 15px;
+        }
+
+        .feed-leaf-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 10px;
+            font-size: 13px;
+            color: #8aaccc;
+            border-radius: 6px;
+            background: rgba(0,0,0,0.06);
+        }
+        .feed-leaf-row .leaf-label { display: flex; align-items: center; gap: 5px; }
+        .feed-leaf-row .leaf-label i { color: #39ff99; font-size: 12px; }
+        .feed-leaf-row .leaf-val { color: #d0e8ff; font-weight: bold; font-size: 14px; }
+
+        .feed-batch-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 10px;
+            font-size: 13px;
+            color: #7ea8c8;
+            border-radius: 6px;
+        }
+        .feed-batch-row:nth-child(odd) { background: rgba(0,0,0,0.06); }
+        .feed-batch-row .batch-val { color: #e8f4ff; font-weight: bold; }
+
+        .feed-progress-bar {
+            height: 8px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 5px 10px;
+        }
+        .feed-progress-bar .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.8s ease;
+        }
+        .progress-fill.green { background: linear-gradient(90deg, #39ff99, #00d8ff); box-shadow: 0 0 8px rgba(57,255,153,0.3); }
+        .progress-fill.amber { background: linear-gradient(90deg, #ffdd44, #ffaa00); box-shadow: 0 0 8px rgba(255,221,68,0.3); }
+
+        /* ========== 蚕虫监控卡片 ========== */
+        .monitor-inline-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            background: rgba(0,0,0,0.06);
+            font-size: 13px;
+            color: #8aaccc;
+            margin-bottom: 4px;
+        }
+        .monitor-inline-row .m-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .monitor-inline-row .m-item i { color: #5a9ec8; font-size: 12px; }
+        .monitor-inline-row .m-val {
+            color: #e8f4ff;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .monitor-inline-row .m-sep {
+            color: #3a5878;
+            margin: 0 2px;
+        }
+        .chart-wrap {
+            position: relative;
+            margin: 8px 0 4px 0;
+            height: 190px;
+        }
+        .chart-wrap canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* ========== 批次资料表格 ========== */
+        .batch-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .batch-table td {
+            padding: 6px 10px;
+            border-bottom: 1px solid rgba(0,180,255,0.08);
+        }
+        .batch-table td:first-child {
+            color: #7ea8c8;
+            white-space: nowrap;
+            width: 40%;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .batch-table td:first-child i { color: #5a9ec8; font-size: 12px; width: 14px; text-align: center; }
+        .batch-table td:last-child {
+            color: #d0e8ff;
+            font-weight: 500;
+            text-align: right;
+        }
+
+        /* ========== 防疫健康卡片 ========== */
+        .risk-banner {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+        .risk-banner i { font-size: 13px; }
+        .risk-banner.normal { background: rgba(57,255,153,0.08); color: #39ff99; border: 1px solid rgba(57,255,153,0.2); }
+        .risk-banner.warn   { background: rgba(255,221,68,0.08); color: #ffdd44; border: 1px solid rgba(255,221,68,0.2); }
+        .risk-banner.error  { background: rgba(255,85,85,0.08); color: #ff5555; border: 1px solid rgba(255,85,85,0.2); }
+
+        .health-score-bar {
+            height: 10px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 6px 0;
+        }
+        .health-score-fill {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.8s ease;
+        }
+        .health-score-fill.high  { background: linear-gradient(90deg, #39ff99, #00d8ff); box-shadow: 0 0 6px rgba(57,255,153,0.3); }
+        .health-score-fill.mid   { background: linear-gradient(90deg, #ffdd44, #ffaa00); box-shadow: 0 0 6px rgba(255,221,68,0.3); }
+        .health-score-fill.low   { background: linear-gradient(90deg, #ff5555, #ff3366); box-shadow: 0 0 6px rgba(255,85,85,0.3); }
+
+        .trend-up   { color: #39ff99; }
+        .trend-down { color: #ff5555; }
+        .trend-flat { color: #5a9ec8; }
+
+        /* ========== 全局统计 ========== */
+        .stat-dist-bar {
+            display: flex;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 6px 0;
+            background: rgba(255,255,255,0.04);
+        }
+        .stat-dist-bar .seg-normal { background: #39ff99; transition: width 0.5s; }
+        .stat-dist-bar .seg-warn   { background: #ffdd44; transition: width 0.5s; }
+        .stat-dist-bar .seg-error  { background: #ff5555; transition: width 0.5s; }
+
+        .stat-ring-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0 0 0;
+        }
+        .stat-ring-wrap svg { flex-shrink: 0; }
+        .stat-legend { font-size: 11px; display: flex; flex-direction: column; gap: 3px; }
+        .stat-legend span { display: flex; align-items: center; gap: 4px; }
+        .stat-legend .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+        .dot.g { background: #39ff99; }
+        .dot.y { background: #ffdd44; }
+        .dot.r { background: #ff5555; }
+
+        /* 告警标题呼吸灯 */
+        .alert-blink .panel-subtitle i { animation: alert-blink-pulse 1.2s ease-in-out infinite; }
+        @keyframes alert-blink-pulse {
+            0%, 100% { color: #ffdd44; opacity: 1; }
+            50% { color: #ff5555; opacity: 0.4; }
+        }
+
+        /* 环形图选中高亮 */
+        .ring-glow { filter: drop-shadow(0 0 8px rgba(0,216,255,0.6)); }
+
+        .feed-num-chip {
+            display: inline-block;
+            background: rgba(0,216,255,0.15);
+            color: #00d8ff;
+            font-weight: bold;
+            font-size: 16px;
+            font-family: 'Consolas', 'Microsoft YaHei', monospace;
+            padding: 1px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(0,216,255,0.3);
+        }
+
+        /* ========== 环形进度 ========== */
+        .ring-stat {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .ring-stat svg {
+            width: 36px; height: 36px;
+            transform: rotate(-90deg);
+        }
+        .ring-stat .ring-bg {
+            fill: none;
+            stroke: rgba(255,255,255,0.06);
+            stroke-width: 3;
+        }
+        .ring-stat .ring-progress {
+            fill: none;
+            stroke-width: 3;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1.2s ease;
+        }
+
+        /* ========== 设备状态标签 ========== */
+        .equip-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            padding: 4px 0;
+        }
+        .equip-tag {
+            padding: 3px 7px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+        .equip-tag.on    { background: rgba(57,255,153,0.12); color: #39ff99; border: 1px solid rgba(57,255,153,0.25); }
+        .equip-tag.off   { background: rgba(255,255,255,0.04); color: #5a7898; border: 1px solid rgba(255,255,255,0.06); }
+        .equip-tag.error { background: rgba(255,85,85,0.12); color: #ff5555; border: 1px solid rgba(255,85,85,0.25); }
+        .equip-tag .tag-dot {
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .equip-tag.on .tag-dot    { background: #39ff99; box-shadow: 0 0 4px #39ff99; }
+        .equip-tag.off .tag-dot   { background: #4a6a88; }
+        .equip-tag.error .tag-dot { background: #ff5555; box-shadow: 0 0 4px #ff5555; }
+
+        /* ========== 环境参数大号温湿度 ========== */
+        .env-hero {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            padding: 10px 0 8px 0;
+        }
+        .env-hero-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            flex: 1;
+            padding: 6px 0;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        .env-hero-item:hover {
+            background: rgba(0,180,255,0.08);
+        }
+        .env-hero-icon {
+            font-size: 22px;
+        }
+        .env-hero-item:first-child .env-hero-icon { color: #00d8ff; }
+        .env-hero-item:last-child  .env-hero-icon { color: #39ff99; }
+        .env-hero-val {
+            font-size: 26px;
+            font-weight: bold;
+            color: #e8f4ff;
+            font-family: 'Consolas', 'Microsoft YaHei', monospace;
+            letter-spacing: 1px;
+        }
+        .env-hero-label {
+            font-size: 12px;
+            color: #5a9ec8;
+            letter-spacing: 1px;
+        }
+        .env-hero-divider {
+            width: 1px;
+            height: 50px;
+            background: linear-gradient(180deg, transparent, rgba(0,180,255,0.3), transparent);
+            margin: 0 8px;
+        }
+
+        /* ========== 设备网格 ========== */
+        .env-device-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            padding: 6px 0 0 0;
+        }
+        .env-device-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 4px;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.12);
+            transition: all 0.25s;
+            position: relative;
+        }
+        .env-device-item .dev-icon-large {
+            font-size: 18px;
+            opacity: 0.3;
+            transition: all 0.25s;
+        }
+        .env-device-item.on .dev-icon-large {
+            opacity: 1;
+            color: #00d8ff;
+            filter: drop-shadow(0 0 6px rgba(0,216,255,0.5));
+        }
+        .env-device-item.error .dev-icon-large {
+            opacity: 1;
+            color: #ff5555;
+            filter: drop-shadow(0 0 6px rgba(255,85,85,0.5));
+            animation: device-blink 1s ease-in-out infinite;
+        }
+        .env-device-item .dev-label {
+            font-size: 11px;
+            color: #4a6a88;
+            transition: color 0.25s;
+        }
+        .env-device-item.on .dev-label {
+            color: #88c8e8;
+        }
+        .env-device-item.error .dev-label {
+            color: #ff8888;
+        }
+        .env-device-item .dev-status-txt {
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: 6px;
+        }
+        .env-device-item.on .dev-status-txt {
+            background: rgba(57,255,153,0.12);
+            color: #39ff99;
+        }
+        .env-device-item.off .dev-status-txt {
+            background: rgba(255,255,255,0.04);
+            color: #4a6a88;
+        }
+        .env-device-item.error .dev-status-txt {
+            background: rgba(255,85,85,0.12);
+            color: #ff5555;
+        }
+
+        @keyframes device-blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* 动画风车图标 */
+        .fan-spin { animation: spin 2s linear infinite; }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .pulse-icon { animation: soft-pulse 2s ease-in-out infinite; }
+        @keyframes soft-pulse {
+            0%,100% { opacity: 1; }
+            50%     { opacity: 0.6; }
+        }
+
+        /* 右侧面板 */
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .right-card {
+            background: linear-gradient(180deg, rgba(0,120,255,0.08) 0%, rgba(0,60,140,0.06) 100%);
+            border: 1px solid rgba(0, 180, 255, 0.22);
+            border-radius: 12px;
+            padding: 16px;
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        .right-card:hover {
+            border-color: rgba(0,216,255,0.35);
+            box-shadow: 0 4px 20px rgba(0,150,255,0.08);
+        }
+
+        .warn-item {
+            padding: 10px 12px;
+            font-size: 13px;
+            border-bottom: 1px solid rgba(0,180,255,0.1);
+            border-radius: 6px;
+            margin-bottom: 4px;
+            transition: background 0.2s;
+        }
+        .warn-item:last-child { border: none; }
+        .warn-item:hover { background: rgba(0,180,255,0.06); }
+
+        /* 状态颜色 */
+        .text-normal { color: #39ff99; }
+        .text-warn { color: #ffdd44; }
+        .text-error { color: #ff5555; }
+
+        /* 旧版 data-row 向后兼容 */
+        .data-row > span:first-child:not(.row-label) { color: #8aaccc; }
+        .data-row > span:last-child:not(.row-value)  { color: #d0e8ff; font-weight: 500; }
+
+        /* 底部通栏 */
+        .bottom-bar {
+            margin-top: 15px;
+            background: linear-gradient(90deg, rgba(0,120,255,0.06), rgba(0,180,255,0.1), rgba(0,120,255,0.06));
+            border: 1px solid rgba(0, 180, 255, 0.2);
+            border-radius: 10px;
+            padding: 12px 20px;
+            text-align: center;
+            font-size: 13px;
+            color: #7ab8d8;
+            letter-spacing: 0.5px;
+        }
+        .bottom-bar i { margin-right: 6px; color: #00d8ff; }
+    </style>
+</head>
+<body>
+    <!-- 顶部栏 -->
+    <div class="top-header">
+        <div class="header-title"><img class="header-logo" src="https://img.seetion.cn/images/png/400x400logo.png" alt="LOGO">贵州希田·蚕室集群大数据监控看板</div>
+    </div>
+
+    <!-- 主体：左列表 + 中C位详情 + 右统计告警 -->
+    <div class="main-wrap">
+        <!-- 左侧：所有蚕室缩略列表（可无限加房间） -->
+        <div class="left-panel">
+            <div class="panel-subtitle"><i class="fa fa-th-list"></i> 蚕室列表</div>
+            <div id="roomListContainer">
+                <!-- 蚕室卡片由 JS 动态渲染，统一风格 -->
+            </div>
+        </div>
+
+        <!-- 中间C位：选中蚕室详细监控（核心视图） -->
+        <div class="center-main">
+            <div class="main-title" id="detailTitle">【蚕室 01号】实时监控详情</div>
+
+            <!-- 状态摘要条 -->
+            <div class="status-summary" id="statusSummary">
+                <div class="summary-item"><span class="summary-dot ok" id="statusBarDot"></span> 运行状态：<strong id="statusBarText" style="color:#39ff99">正常</strong>　●　设备在线：<strong>6/6</strong>　🕐 数据刷新：<strong>实时</strong></div>
+                <div class="summary-item" style="font-size:14px"><i class="fa fa-sync-alt fa-spin" style="color:#00d8ff;font-size:12px;margin-right:5px"></i> 即将查看 <strong style="color:#ffb400" id="carouselRoom">蚕室 03号</strong> 倒计时 <strong style="color:#39ff99;font-family:'Consolas','Microsoft YaHei',monospace" id="carouselTimer">120</strong> 秒</div>
+                <div class="summary-item"><i class="fa fa-calendar" style="color:#00d8ff;font-size:13px;margin-right:6px"></i><strong id="statusClock" style="font-family:'Consolas','Microsoft YaHei',monospace">--</strong></div>
+            </div>
+
+            <div class="content-grid">
+                <!-- ====== 环境参数 ====== -->
+                <div class="detail-card" id="envCard">
+                    <div class="card-head">
+                        <span class="head-icon env"><i class="fa fa-thermometer-half"></i></span>
+                        环境参数
+                        <span class="head-badge badge-normal" id="envStatusBadge">正常</span>
+                    </div>
+
+                    <!-- 大号温湿度同行 -->
+                    <div class="env-hero">
+                        <div class="env-hero-item">
+                            <i class="fa fa-thermometer-half env-hero-icon"></i>
+                            <span class="env-hero-val" id="envTempVal">24.5°</span>
+                            <span class="env-hero-label">温度</span>
+                        </div>
+                        <div class="env-hero-divider"></div>
+                        <div class="env-hero-item">
+                            <i class="fa fa-tint env-hero-icon"></i>
+                            <span class="env-hero-val" id="envHumidityVal">80%</span>
+                            <span class="env-hero-label">湿度</span>
+                        </div>
+                    </div>
+
+                    <div class="data-divider"></div>
+
+                    <!-- 设备运行状态 3×2 网格 -->
+                    <div class="section-label">设备运行状态</div>
+                    <div class="env-device-grid" id="envDeviceGrid">
+                        <!-- JS 动态渲染 -->
+                    </div>
+                </div>
+
+                <!-- ====== 喂养概况 ====== -->
+                <div class="detail-card" id="feedCard">
+                    <div class="card-head">
+                        <span class="head-icon feed"><i class="fa fa-leaf"></i></span>
+                        喂养概况
+                        <span class="head-badge badge-normal" id="feedStatusBadge">正常</span>
+                    </div>
+
+                    <!-- 蚕龄 + 现存/养殖天数（同行） -->
+                    <div class="data-row" style="margin-bottom:2px">
+                        <span class="row-label"><i class="fa fa-seedling"></i> 蚕龄</span>
+                        <span class="row-value"><span class="feed-num-chip" id="feedLarvaStage">3龄第4天</span></span>
+                    </div>
+                    <div class="feed-inline-row">
+                        <span class="inline-item"><i class="fa fa-bug"></i> 现存</span>
+                        <span class="inline-val" id="feedLarvaCount">15000</span>
+                        <span style="color:#5a7898;font-size:12px">头</span>
+                        <span style="color:#3a5878;margin:0 4px">|</span>
+                        <span class="inline-item"><i class="fa fa-calendar-day"></i> 本批养殖</span>
+                        <span class="inline-val" id="feedBreedDays">15</span>
+                        <span style="color:#5a7898;font-size:12px">天</span>
+                    </div>
+
+                    <div class="data-divider"></div>
+
+                    <!-- 今日喂养进度 -->
+                    <div class="section-label">今日喂养进度</div>
+                    <div class="mini-gauge">
+                        <i class="fa fa-utensils" style="color:#39ff99;font-size:13px"></i>
+                        <span style="font-size:13px;color:#b8d4f0;min-width:40px">完成</span>
+                        <div class="gauge-bar">
+                            <div class="gauge-fill normal" id="feedTodayBar" style="width:66%"></div>
+                        </div>
+                        <span class="gauge-label" id="feedTodayRatio" style="color:#39ff99;min-width:40px;font-size:13px">2/3 餐</span>
+                    </div>
+
+                    <div class="feed-leaf-row" style="justify-content:space-around">
+                        <span class="leaf-label"><i class="fa fa-leaf"></i> 已喂 <span class="leaf-val" id="feedTodayLeafFed">80</span> 斤</span>
+                        <span style="color:#3a5878">|</span>
+                        <span class="leaf-label"><i class="fa fa-calculator"></i> 预计 <span class="leaf-val" id="feedTodayLeafNeed">120</span> 斤</span>
+                        <span style="color:#3a5878">|</span>
+                        <span class="leaf-label"><i class="fa fa-box"></i> 库存 <span class="leaf-val" id="feedStock" style="color:#39ff99">200</span> 斤</span>
+                    </div>
+
+                    <div class="data-divider"></div>
+
+                    <!-- 本批喂养进度 -->
+                    <div class="section-label">本批喂养进度</div>
+                    <div class="feed-leaf-row">
+                        <span class="leaf-label"><i class="fa fa-boxes-stacked" style="color:#00d8ff"></i> 已喂 <span class="batch-val" id="feedBatchFed">450</span> 斤</span>
+                        <span class="leaf-label"><i class="fa fa-chart-pie" style="color:#c882ff"></i> 预计 <span class="batch-val" id="feedBatchTotal">850</span> 斤</span>
+                    </div>
+                    <div class="feed-leaf-row">
+                        <span class="leaf-label"><i class="fa fa-hourglass-half" style="color:#ffb400"></i> 还需 <span class="batch-val" id="feedBatchRemain" style="color:#ffdd44">400</span> 斤</span>
+                        <span style="flex:1;margin-left:10px">
+                            <div class="feed-progress-bar" style="margin:0">
+                                <div class="progress-fill green" id="feedBatchBar" style="width:52%"></div>
+                            </div>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- ====== 蚕虫监控 ====== -->
+                <div class="detail-card" id="monitorCard">
+                    <div class="card-head">
+                        <span class="head-icon monitor"><i class="fa fa-chart-bar"></i></span>
+                        蚕虫监控
+                        <span class="head-badge badge-normal" id="monitorStatusBadge">正常</span>
+                    </div>
+
+                    <!-- 体长 + 体重（同行） -->
+                    <div class="monitor-inline-row">
+                        <span class="m-item"><i class="fa fa-ruler"></i> 体长</span>
+                        <span class="m-val" id="monBodyLength">2.8 cm</span>
+                        <span class="m-sep">|</span>
+                        <span class="m-item"><i class="fa fa-weight-scale"></i> 体重</span>
+                        <span class="m-val" id="monBodyWeight">1.2 g</span>
+                        <span class="m-sep">|</span>
+                        <span class="m-item"><i class="fa fa-hourglass-half"></i> 上簇倒计时</span>
+                        <span class="m-val" id="monCountdown" style="color:#ffb400">13 天</span>
+                    </div>
+
+                    <!-- 生长趋势折线图 -->
+                    <div class="section-label" style="margin-bottom:0">生长趋势</div>
+                    <div class="chart-wrap">
+                        <canvas id="growthChart"></canvas>
+                    </div>
+
+                    <!-- 成活率 + 起眠 + 上簇（同行） -->
+                    <div class="monitor-inline-row">
+                        <span class="m-item"><i class="fa fa-heart"></i> 成活</span>
+                        <span class="m-val" id="monSurvival" style="color:#39ff99">99.8%</span>
+                        <span class="m-sep">|</span>
+                        <span class="m-item"><i class="fa fa-bed"></i> 起眠</span>
+                        <span class="m-val" id="monMolt">齐整</span>
+                        <span class="m-sep">|</span>
+                        <span class="m-item"><i class="fa fa-calendar-check"></i> 上簇</span>
+                        <span class="m-val" id="monMount" style="color:#c882ff">6月12日</span>
+                    </div>
+                </div>
+
+                <!-- ====== 批次资料 ====== -->
+                <div class="detail-card" id="batchCard">
+                    <div class="card-head">
+                        <span class="head-icon batch"><i class="fa fa-file-alt"></i></span>
+                        批次资料
+                        <span class="head-badge badge-normal" id="batchStatusBadge">正常</span>
+                    </div>
+
+                    <table class="batch-table">
+                        <tr><td><i class="fa fa-tag"></i> 批次编号</td><td id="batchCode">SC-2026-03</td></tr>
+                        <tr><td><i class="fa fa-dna"></i> 蚕种品种</td><td id="batchBreed">菁松×皓月</td></tr>
+                        <tr><td><i class="fa fa-calendar"></i> 收蚁日期</td><td id="batchDate">05-10</td></tr>
+                        <tr><td><i class="fa fa-cubes"></i> 投放数量</td><td id="batchCount">16000 头</td></tr>
+                        <tr><td><i class="fa fa-warehouse"></i> 蚕种来源</td><td id="batchSource">省蚕种场</td></tr>
+                        <tr><td style="vertical-align:top"><i class="fa fa-sticky-note"></i> 备注</td><td id="batchNote" style="font-size:12px;line-height:1.4">—</td></tr>
+                    </table>
+                </div>
+
+                <!-- ====== 蚕座管理 ====== -->
+                <div class="detail-card" id="manageCard">
+                    <div class="card-head">
+                        <span class="head-icon manage"><i class="fa fa-list-alt"></i></span>
+                        蚕座管理
+                        <span class="head-badge badge-normal" id="manageStatusBadge">正常</span>
+                    </div>
+
+                    <!-- 蚕座状态分布 -->
+                    <div class="monitor-inline-row">
+                        <span class="m-item"><i class="fa fa-th-large"></i> 蚕座</span>
+                        <span class="m-val" id="manageTrays">30 座</span>
+                        <span class="m-sep">|</span>
+                        <span style="color:#39ff99;font-size:12px" id="manageTrayNormal">28 正常</span>
+                        <span class="m-val" style="color:#ffdd44;font-size:12px" id="manageTrayIsolate">2 隔离</span>
+                    </div>
+
+                    <!-- 密度细化 -->
+                    <div class="data-row" style="font-size:12px">
+                        <span class="row-label"><i class="fa fa-expand"></i> 密度分布</span>
+                        <span class="row-value" id="manageDensDetail">均320 最350 低290 头/座</span>
+                    </div>
+
+                    <div class="data-divider"></div>
+
+                    <!-- 扩座/匀座（同行） -->
+                    <div class="feed-leaf-row" style="margin-bottom:3px">
+                        <span class="leaf-label"><i class="fa fa-arrows-alt"></i> 扩座 <span class="leaf-val" id="manageLastExpand">05-24</span></span>
+                        <span class="leaf-label"><i class="fa fa-calendar-plus"></i> 匀座 <span class="leaf-val" style="color:#ffb400" id="manageNextExpand">05-29</span></span>
+                    </div>
+
+                    <!-- 蚕座消毒（同行） -->
+                    <div class="feed-leaf-row">
+                        <span class="leaf-label"><i class="fa fa-pump-medical"></i> 消毒 <span class="leaf-val" id="manageTrayDisinfect">05-26</span></span>
+                        <span class="leaf-label"><i class="fa fa-calendar-check"></i> 下次 <span class="leaf-val" style="color:#c882ff" id="manageTrayNextDisinfect">05-28</span></span>
+                    </div>
+
+                    <div class="data-divider"></div>
+
+                    <!-- 除沙进度 -->
+                    <div class="section-label">除沙进度</div>
+                    <div class="mini-gauge">
+                        <i class="fa fa-broom" style="color:#ffb400;font-size:13px"></i>
+                        <span style="font-size:13px;color:#b8d4f0;min-width:40px">已除</span>
+                        <div class="gauge-bar">
+                            <div class="gauge-fill normal" id="manageSandBar" style="width:0%"></div>
+                        </div>
+                        <span class="gauge-label" id="manageSandRatio" style="min-width:50px;font-size:13px">0/30 座</span>
+                    </div>
+
+                    <div class="data-row" style="margin-top:4px">
+                        <span class="row-label"><i class="fa fa-user"></i> 当班</span>
+                        <span class="row-value" style="color:#00d8ff" id="manageStaff">张师傅</span>
+                    </div>
+                </div>
+
+                <!-- ====== 防疫健康 ====== -->
+                <div class="detail-card" id="healthCard">
+                    <div class="card-head">
+                        <span class="head-icon health"><i class="fa fa-shield-alt"></i></span>
+                        防疫健康
+                        <span class="head-badge badge-normal" id="healthStatusBadge">正常</span>
+                    </div>
+
+                    <!-- 风险预警 -->
+                    <div class="risk-banner" id="healthRiskBanner">
+                        <i class="fa fa-check-circle"></i><span id="healthRiskTxt">当前无病害风险，注意通风防僵病</span>
+                    </div>
+
+                    <!-- 用药记录（同行） -->
+                    <div class="feed-leaf-row" style="margin-bottom:3px">
+                        <span class="leaf-label"><i class="fa fa-capsules"></i> 用药 <span class="leaf-val" id="healthLastMed">05-25</span></span>
+                        <span class="leaf-label"><i class="fa fa-calendar-plus"></i> 下次 <span class="leaf-val" style="color:#c882ff" id="healthNextMed">05-29</span></span>
+                    </div>
+
+                    <!-- 消毒记录（同行） -->
+                    <div class="feed-leaf-row">
+                        <span class="leaf-label"><i class="fa fa-pump-medical"></i> 消毒 <span class="leaf-val" id="healthDisinfect">蚕体+地面</span></span>
+                        <span class="leaf-label"><i class="fa fa-calendar-check"></i> 下次 <span class="leaf-val" style="color:#c882ff" id="healthNextDisinfect">05-28</span></span>
+                    </div>
+
+                    <div class="data-divider"></div>
+
+                    <!-- 病死蚕处理 -->
+                    <div class="feed-leaf-row" style="margin-bottom:3px">
+                        <span class="leaf-label"><i class="fa fa-skull"></i> 病死 <span class="leaf-val" id="healthDeadNow">0 只</span></span>
+                        <span class="leaf-label" style="font-size:11px"><span id="healthDeadTrend" class="trend-flat">上周 0 只 → 无异常</span></span>
+                    </div>
+                    <div class="data-row" style="font-size:12px">
+                        <span class="row-label"><i class="fa fa-fire"></i> 处理</span>
+                        <span class="row-value" id="healthDeadMethod">焚烧</span>
+                    </div>
+
+                    <div class="data-divider"></div>
+
+                    <!-- 健康评分 -->
+                    <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
+                        <i class="fa fa-heart pulse-icon" style="color:#39ff99;font-size:13px"></i>
+                        <span style="font-size:13px;color:#d0e8ff">健康评分</span>
+                        <span style="margin-left:auto;font-size:18px;font-weight:bold;font-family:'Consolas','Microsoft YaHei',monospace" id="healthScoreNum">98</span>
+                    </div>
+                    <div class="health-score-bar">
+                        <div class="health-score-fill high" id="healthScoreBar" style="width:98%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：全局统计 + 异常告警 -->
+        <div class="right-panel">
+            <div class="right-card" id="globalStatsCard">
+                <div class="panel-subtitle"><i class="fa fa-database"></i> 集群全局统计</div>
+                <div class="data-row">
+                    <span class="row-label"><i class="fa fa-building"></i> 总蚕室</span>
+                    <span class="row-value"><strong id="statTotal">8</strong> 间　在线 <strong id="statOnline">8</strong></span>
+                </div>
+                <div class="stat-dist-bar">
+                    <div class="seg-normal" id="statBarNormal" style="width:75%"></div>
+                    <div class="seg-warn"   id="statBarWarn"   style="width:12%"></div>
+                    <div class="seg-error"  id="statBarError"  style="width:13%"></div>
+                </div>
+                <div class="data-row" style="font-size:12px">
+                    <span class="row-label">正常率</span>
+                    <span class="row-value val-normal" id="statNormalRate">75%</span>
+                </div>
+                <div class="data-divider"></div>
+                <div class="data-row">
+                    <span class="row-label"><i class="fa fa-bug"></i> 集群蚕量</span>
+                    <span class="row-value" id="statTotalLarva">121,000 头</span>
+                </div>
+                <div class="data-row">
+                    <span class="row-label"><i class="fa fa-leaf"></i> 今日喂桑</span>
+                    <span class="row-value" id="statTotalLeaf">480 斤</span>
+                </div>
+                <div class="data-row">
+                    <span class="row-label"><i class="fa fa-skull"></i> 整体死淘</span>
+                    <span class="row-value" id="statDeadRate">0.2%</span>
+                </div>
+                <div class="data-row">
+                    <span class="row-label"><i class="fa fa-heart"></i> 均健康分</span>
+                    <span class="row-value" id="statAvgScore" style="color:#39ff99">91.6</span>
+                </div>
+                <div class="data-divider"></div>
+                <!-- 环形比例图 -->
+                <div class="stat-ring-wrap">
+                    <svg width="50" height="50" viewBox="0 0 50 50" id="statRing">
+                        <!-- JS 动态更新 -->
+                    </svg>
+                    <div class="stat-legend">
+                        <span><span class="dot g"></span> 正常 <strong id="statLegendNormal" style="color:#39ff99">6</strong></span>
+                        <span><span class="dot y"></span> 预警 <strong id="statLegendWarn" style="color:#ffdd44">1</strong></span>
+                        <span><span class="dot r"></span> 异常 <strong id="statLegendError" style="color:#ff5555">1</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-card" id="alertCard">
+                <div class="panel-subtitle"><i class="fa fa-exclamation-triangle"></i> 实时告警</div>
+                <div id="globalAlerts">
+                    <!-- JS 动态渲染 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部通栏：全局提示 -->
+    <div class="bottom-bar">
+        <i class="fa fa-info-circle"></i> 操作提示：点击蚕室切换详情 | 🟢正常 🟡预警 🔴异常 | F11 全屏
+        <span style="margin-left:auto;display:flex;gap:16px">
+            <i class="fa fa-cog" onclick="openAdmin()" title="后台管理" style="cursor:pointer;color:#5a9ec8;font-size:15px;transition:color 0.2s" onmouseover="this.style.color='#00d8ff'" onmouseout="this.style.color='#5a9ec8'"></i>
+            <i class="fa fa-download" onclick="exportCSV()" title="导出数据" style="cursor:pointer;color:#5a9ec8;font-size:15px;transition:color 0.2s" onmouseover="this.style.color='#00d8ff'" onmouseout="this.style.color='#5a9ec8'"></i>
+        </span>
+    </div>
+
+    <div style="text-align:center;font-size:15px;color:#1a3050;padding:20px 0 8px 0;letter-spacing:1px">贵州希田智慧农业科技有限公司</div>
+    <div style="text-align:center;font-size:13px;color:#162c48;padding-bottom:6px;letter-spacing:1px">Guizhou Seetion Smart Agriculture Technology Co., Ltd.</div>
+
+    <!-- ====== 后台管理面板 ====== -->
+    <div class="admin-overlay" id="adminOverlay">
+        <div class="admin-panel">
+            <h3><i class="fa fa-cog fa-spin"></i> 蚕室后台管理 <button class="admin-close" onclick="closeAdmin()">✕ 关闭</button></h3>
+            <div class="admin-toolbar">
+                <button class="admin-btn" onclick="openEditRoom()"><i class="fa fa-plus"></i> 新增蚕室</button>
+                <span style="color:#7ea8c8;font-size:12px;margin-left:auto">点击设备图标切换状态：🟢正常 → ⚫关闭 → 🔴异常</span>
+            </div>
+            <div style="overflow-x:auto">
+                <table class="admin-table" id="adminTable">
+                    <thead><tr><th>ID</th><th>名称</th><th>状态</th><th>⏻电源</th><th>📶网络</th><th>🌀通风</th><th>❄制冷</th><th>🚿加湿</th><th>🔥加热</th><th style="text-align:center">操作</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== 编辑弹窗 ====== -->
+    <div class="edit-modal" id="editModal">
+        <div class="edit-form" id="editForm">
+            <h4 id="editTitle">新增蚕室</h4>
+            <div class="form-section s1">
+                <div class="section-title">📋 基本信息</div>
+                <div class="form-row col3">
+                    <div><label>名称</label><input id="efName" placeholder="蚕室 01号"></div>
+                    <div><label>状态</label><select id="efStatus"><option value="normal">正常</option><option value="warn">预警</option><option value="error">异常</option><option value="offline">离线</option></select></div>
+                    <div><label>温度</label><input id="efTemp" placeholder="24.5°"></div>
+                </div>
+                <div class="form-row">
+                    <div><label>湿度</label><input id="efHum" placeholder="80%"></div>
+                    <div><label>蚕龄</label><input id="efLarvaStage" placeholder="3龄第4天"></div>
+                    <div><label>现存(头)</label><input id="efLarvaCount" type="number" placeholder="15000"></div>
+                    <div><label>养殖天数</label><input id="efBreedDays" type="number" placeholder="15"></div>
+                </div>
+            </div>
+            <div class="form-section s2">
+                <div class="section-title">🔌 设备状态（1=正常 0=关闭 -1=异常）</div>
+                <div class="form-row col3" id="efDevices">
+                    <div><label>⏻ 电源</label><select id="efPower"><option value="1">1 正常</option><option value="0">0 关闭</option><option value="-1">-1 异常</option></select></div>
+                    <div><label>📶 网络</label><select id="efWifi"><option value="1">1 正常</option><option value="0">0 关闭</option><option value="-1">-1 异常</option></select></div>
+                    <div><label>🌀 通风</label><select id="efFan"><option value="1">1 正常</option><option value="0">0 关闭</option><option value="-1">-1 异常</option></select></div>
+                    <div><label>❄ 制冷</label><select id="efSnow"><option value="0">0 关闭</option><option value="1">1 正常</option><option value="-1">-1 异常</option></select></div>
+                    <div><label>🚿 加湿</label><select id="efShower"><option value="0">0 关闭</option><option value="1">1 正常</option><option value="-1">-1 异常</option></select></div>
+                    <div><label>🔥 加热</label><select id="efFire"><option value="0">0 关闭</option><option value="1">1 正常</option><option value="-1">-1 异常</option></select></div>
+                </div>
+            </div>
+            <div class="form-section s3">
+                <div class="section-title">🍃 喂养数据</div>
+                <div class="form-row col3">
+                    <div><label>今日已喂餐</label><input id="efFeedDone" type="number" placeholder="2"></div>
+                    <div><label>今日总餐</label><input id="efFeedTotal" type="number" placeholder="3"></div>
+                    <div><label>今日已喂桑叶(斤)</label><input id="efTodayLeafFed" type="number" placeholder="80"></div>
+                    <div><label>今日预计桑叶(斤)</label><input id="efTodayLeafNeed" type="number" placeholder="120"></div>
+                    <div><label>本批已喂桑叶(斤)</label><input id="efBatchLeafFed" type="number" placeholder="450"></div>
+                    <div><label>本批预计桑叶(斤)</label><input id="efBatchLeafTotal" type="number" placeholder="850"></div>
+                    <div><label>库存(斤)</label><input id="efStock" type="number" placeholder="200"></div>
+                </div>
+            </div>
+            <div class="form-section s4">
+                <div class="section-title">📊 蚕虫监控</div>
+                <div class="form-row col3">
+                    <div><label>体长</label><input id="efBodyLen" placeholder="2.8 cm"></div>
+                    <div><label>体重</label><input id="efBodyWt" placeholder="1.2 g"></div>
+                    <div><label>成活率</label><input id="efSurv" placeholder="99.8%"></div>
+                    <div><label>起眠</label><input id="efMolt" placeholder="齐整"></div>
+                    <div><label>上簇日期</label><input id="efMount" placeholder="6月12日"></div>
+                </div>
+                <div style="margin-top:6px"><label>📈 生长数据（每行：天,体长cm,体重g）</label><textarea id="efGrowthData" rows="4" placeholder="1,0.5,0.02&#10;2,0.8,0.04&#10;3,1.2,0.08&#10;...&#10;留空则自动模拟"></textarea></div>
+            </div>
+            <div class="form-section s5">
+                <div class="section-title">📦 批次资料</div>
+                <div class="form-row col3">
+                    <div><label>批次编号</label><input id="efBatchCode" placeholder="SC-2026-03"></div>
+                    <div><label>品种</label><input id="efBreed" placeholder="菁松×皓月"></div>
+                    <div><label>收蚁日期</label><input id="efBatchDate" placeholder="05-10"></div>
+                    <div><label>投放(头)</label><input id="efBatchCount" placeholder="16000 头"></div>
+                    <div><label>来源</label><input id="efBatchSrc" placeholder="省蚕种场"></div>
+                    <div><label>备注</label><input id="efBatchNote" placeholder="特殊事件"></div>
+                </div>
+            </div>
+            <div class="form-section s6">
+                <div class="section-title">🗂 蚕座管理</div>
+                <div class="form-row col3">
+                    <div><label>蚕座总</label><input id="efMgTrays" placeholder="30 座"></div>
+                    <div><label>正常座</label><input id="efMgNorm" type="number" placeholder="28"></div>
+                    <div><label>隔离座</label><input id="efMgIso" type="number" placeholder="2"></div>
+                    <div><label>密度(均值)</label><input id="efMgDensAvg" placeholder="320-350-290"></div>
+                    <div><label>密度状态</label><input id="efMgDensity" placeholder="正常"></div>
+                    <div><label>上次扩座</label><input id="efMgLastExp" placeholder="05-24"></div>
+                    <div><label>计划匀座</label><input id="efMgNextExp" placeholder="05-29"></div>
+                    <div><label>蚕座消毒</label><input id="efMgDisinf" placeholder="05-26"></div>
+                    <div><label>下次消毒</label><input id="efMgNextDis" placeholder="05-28"></div>
+                    <div><label>已除沙</label><input id="efMgSandDone" type="number" placeholder="0"></div>
+                    <div><label>总除沙</label><input id="efMgSandTotal" type="number" placeholder="30"></div>
+                    <div><label>当班</label><input id="efMgStaff" placeholder="张师傅"></div>
+                </div>
+            </div>
+            <div class="form-section s7">
+                <div class="section-title">🛡 防疫健康</div>
+                <div class="form-row col3">
+                    <div><label>健康风险</label><input id="efHlRisk" placeholder="当前无病害风险"></div>
+                    <div><label>风险等级</label><select id="efHlRiskLv"><option value="normal">正常</option><option value="warn">预警</option><option value="error">异常</option></select></div>
+                    <div><label>上次用药</label><input id="efHlLastMed" placeholder="05-25 防僵粉"></div>
+                    <div><label>下次用药</label><input id="efHlNextMed" placeholder="05-29"></div>
+                    <div><label>消毒方式</label><input id="efHlDisinf" placeholder="蚕体+地面"></div>
+                    <div><label>下次防疫消毒</label><input id="efHlNextDis" placeholder="05-28"></div>
+                    <div><label>本周病死蚕</label><input id="efHlDeadNow" type="number" placeholder="0"></div>
+                    <div><label>上周病死蚕</label><input id="efHlDeadLast" type="number" placeholder="0"></div>
+                    <div><label>处理方式</label><input id="efHlDeadMtd" placeholder="焚烧"></div>
+                    <div><label>健康评分</label><input id="efHlScore" type="number" placeholder="98"></div>
+                </div>
+            </div>
+            <div class="btn-row">
+                <button class="admin-btn" onclick="closeEditModal()">取消</button>
+                <button class="admin-btn" onclick="saveRoom()" style="background:rgba(0,216,255,0.22);border-color:#00d8ff">💾 保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        //  蚕室数据源（后续接入后台只需替换此处数据获取方式）
+        //  devices: { power,wifi,fan,snow,shower,fire }  1=正常运行  0=关闭  -1=故障
+        // ============================================================
+        const DEFAULT_ROOMS = [
+            { id:1,  name:'蚕室 01号', temp:'24.5°', humidity:'80%', devices:{power:1,wifi:1,fan:1,snow:0,shower:0,fire:0}, status:'normal',
+              larvaStage:'3龄第4天', larvaCount:15000, breedDays:15, todayFeedDone:2, todayFeedTotal:3, todayLeafFed:80, todayLeafNeed:120, batchLeafFed:450, batchLeafTotal:850,
+              bodyLength:'2.8 cm', bodyWeight:'1.2 g', survivalRate:'99.8%', moltStatus:'齐整', mountTime:'6月12日',
+              growthData:'1,0.4,0.02\n2,0.5,0.03\n3,0.7,0.05\n4,0.9,0.08\n5,1.1,0.12\n6,1.3,0.18\n7,1.5,0.24\n8,1.7,0.32\n9,1.9,0.42\n10,2.1,0.55\n11,2.3,0.68\n12,2.5,0.82\n13,2.6,0.95\n14,2.7,1.08\n15,2.8,1.20',
+              batchCode:'SC-2026-03', batchBreed:'菁松×皓月', batchDate:'05-10', batchCount:'16000 头', batchSource:'省蚕种场', batchNote:'5月26日曾遇停电，温湿度波动约2小时',
+              manageTrays:'30 座', manageTrayNormal:28, manageTrayIsolate:2, manageDensAvg:320, manageDensMax:350, manageDensMin:290, manageDensity:'正常', manageLastExpand:'05-24', manageNextExpand:'05-29', manageTrayDisinfect:'05-26', manageTrayNextDisinfect:'05-28 除沙后', manageSandDone:0, manageSandTotal:30, manageStaff:'张师傅',
+              feedStock:200, healthRisk:'当前无病害风险，注意通风防僵病', healthRiskLv:'normal', healthLastMed:'05-25 防僵粉', healthNextMed:'05-29',
+              healthDisinfect:'蚕体+地面消毒', healthNextDisinfect:'05-28 晚间', healthDeadNow:0, healthDeadLast:0, healthDeadMethod:'焚烧', healthScore:98 },
+            { id:2,  name:'蚕室 02号', temp:'23.0°', humidity:'78%', devices:{power:1,wifi:1,fan:1,snow:0,shower:0,fire:0}, status:'normal',
+              larvaStage:'2龄第2天', larvaCount:16000, breedDays:10, todayFeedDone:2, todayFeedTotal:2, todayLeafFed:60, todayLeafNeed:60,  batchLeafFed:200, batchLeafTotal:500,
+              bodyLength:'1.5 cm', bodyWeight:'0.3 g', survivalRate:'99.9%', moltStatus:'齐整', mountTime:'6月25日',
+              batchCode:'SC-2026-04', batchBreed:'菁松×皓月', batchDate:'05-18', batchCount:'16500 头', batchSource:'省蚕种场', batchNote:'—',
+              manageTrays:'32 座', manageTrayNormal:32, manageTrayIsolate:0, manageDensAvg:310, manageDensMax:340, manageDensMin:280, manageDensity:'正常', manageLastExpand:'05-20', manageNextExpand:'05-27', manageTrayDisinfect:'05-25', manageTrayNextDisinfect:'05-28 上午', manageSandDone:10, manageSandTotal:32, manageStaff:'李师傅',
+              feedStock:180, healthRisk:'当前无病害风险，幼蚕期保持温湿度稳定', healthRiskLv:'normal', healthLastMed:'05-24 防僵粉', healthNextMed:'05-28',
+              healthDisinfect:'蚕体消毒', healthNextDisinfect:'05-28 上午', healthDeadNow:0, healthDeadLast:0, healthDeadMethod:'焚烧', healthScore:99 },
+            { id:3,  name:'蚕室 03号', temp:'25.8°', humidity:'82%', devices:{power:1,wifi:1,fan:1,snow:1,shower:0,fire:0}, status:'warn',
+              bodyLength:'3.5 cm', bodyWeight:'2.0 g', survivalRate:'98.5%', moltStatus:'略有参差', mountTime:'6月8日',
+              batchCode:'SC-2026-02', batchBreed:'春蕾×锡昉', batchDate:'05-08', batchCount:'14500 头', batchSource:'省蚕种场', batchNote:'5月24日发现少量脓病蚕，已隔离处理',
+              manageTrays:'35 座', manageTrayNormal:33, manageTrayIsolate:2, manageDensAvg:350, manageDensMax:380, manageDensMin:310, manageDensity:'偏高', manageLastExpand:'05-23', manageNextExpand:'05-27', manageTrayDisinfect:'05-25', manageTrayNextDisinfect:'05-27 下午', manageSandDone:15, manageSandTotal:35, manageStaff:'王师傅',
+              feedStock:150, healthRisk:'湿度偏高，僵病风险上升，建议加强通风', healthRiskLv:'warn', healthLastMed:'05-23 防僵粉+抗生素', healthNextMed:'05-27',
+              healthDisinfect:'蚕体+蚕室地面', healthNextDisinfect:'05-27 下午', healthDeadNow:2, healthDeadLast:0, healthDeadMethod:'焚烧', healthScore:82 },
+            { id:4,  name:'蚕室 04号', temp:'22.0°', humidity:'76%', devices:{power:1,wifi:1,fan:1,snow:0,shower:0,fire:0}, status:'normal',
+              larvaStage:'3龄第3天', larvaCount:15500, breedDays:14, todayFeedDone:2, todayFeedTotal:3, todayLeafFed:75, todayLeafNeed:115, batchLeafFed:420, batchLeafTotal:820,
+              bodyLength:'2.6 cm', bodyWeight:'1.0 g', survivalRate:'99.5%', moltStatus:'齐整', mountTime:'6月13日',
+              batchCode:'SC-2026-05', batchBreed:'菁松×皓月', batchDate:'05-12', batchCount:'15800 头', batchSource:'省蚕种场', batchNote:'—',
+              manageTrays:'28 座', manageTrayNormal:28, manageTrayIsolate:0, manageDensAvg:330, manageDensMax:360, manageDensMin:300, manageDensity:'正常', manageLastExpand:'05-23', manageNextExpand:'05-28', manageTrayDisinfect:'05-25', manageTrayNextDisinfect:'05-28 下午', manageSandDone:5, manageSandTotal:28, manageStaff:'赵师傅',
+              feedStock:190, healthRisk:'当前无病害风险，保持日常防疫即可', healthRiskLv:'normal', healthLastMed:'05-24 防僵粉', healthNextMed:'05-28',
+              healthDisinfect:'蚕体+地面消毒', healthNextDisinfect:'05-28 下午', healthDeadNow:0, healthDeadLast:1, healthDeadMethod:'深埋', healthScore:95 },
+            { id:5,  name:'蚕室 05号', temp:'26.5°', humidity:'85%', devices:{power:1,wifi:0,fan:0,snow:-1,shower:0,fire:0}, status:'error',
+              larvaStage:'3龄第5天', larvaCount:13000, breedDays:16, todayFeedDone:0, todayFeedTotal:3, todayLeafFed:0,  todayLeafNeed:130, batchLeafFed:480, batchLeafTotal:880,
+              bodyLength:'2.4 cm', bodyWeight:'0.8 g', survivalRate:'95.2%', moltStatus:'不齐', mountTime:'6月15日',
+              batchCode:'SC-2026-06', batchBreed:'春蕾×锡昉', batchDate:'05-09', batchCount:'17000 头', batchSource:'市蚕种场', batchNote:'5月25日降温设备故障，26日已修复；5月27日发现僵病扩散',
+              manageTrays:'25 座', manageTrayNormal:20, manageTrayIsolate:5, manageDensAvg:380, manageDensMax:420, manageDensMin:310, manageDensity:'过高', manageLastExpand:'05-21', manageNextExpand:'05-26', manageTrayDisinfect:'05-24', manageTrayNextDisinfect:'05-27 上午', manageSandDone:0, manageSandTotal:25, manageStaff:'陈师傅',
+              feedStock:120, healthRisk:'温度超标+湿度过高，僵病高发风险！立即降温除湿', healthRiskLv:'error', healthLastMed:'05-22 防僵粉+抗生素', healthNextMed:'05-26',
+              healthDisinfect:'紧急全室消毒', healthNextDisinfect:'05-27 上午', healthDeadNow:5, healthDeadLast:2, healthDeadMethod:'焚烧', healthScore:65 },
+            { id:6,  name:'蚕室 06号', temp:'24.1°', humidity:'79%', devices:{power:1,wifi:1,fan:1,snow:0,shower:0,fire:0}, status:'normal',
+              larvaStage:'3龄第4天', larvaCount:14800, breedDays:15, todayFeedDone:2, todayFeedTotal:3, todayLeafFed:78, todayLeafNeed:118, batchLeafFed:440, batchLeafTotal:840,
+              bodyLength:'2.7 cm', bodyWeight:'1.1 g', survivalRate:'99.6%', moltStatus:'齐整', mountTime:'6月12日',
+              batchCode:'SC-2026-07', batchBreed:'菁松×皓月', batchDate:'05-11', batchCount:'15200 头', batchSource:'省蚕种场', batchNote:'—',
+              manageTrays:'29 座', manageTrayNormal:29, manageTrayIsolate:0, manageDensAvg:325, manageDensMax:355, manageDensMin:295, manageDensity:'正常', manageLastExpand:'05-23', manageNextExpand:'05-28', manageTrayDisinfect:'05-25', manageTrayNextDisinfect:'05-28 上午', manageSandDone:8, manageSandTotal:29, manageStaff:'刘师傅',
+              feedStock:210, healthRisk:'当前无病害风险，注意日常消毒', healthRiskLv:'normal', healthLastMed:'05-25 防僵粉', healthNextMed:'05-29',
+              healthDisinfect:'蚕体消毒', healthNextDisinfect:'05-28 上午', healthDeadNow:0, healthDeadLast:0, healthDeadMethod:'焚烧', healthScore:97 },
+            { id:7,  name:'蚕室 07号', temp:'23.5°', humidity:'81%', devices:{power:1,wifi:1,fan:1,snow:0,shower:0,fire:0}, status:'normal',
+              larvaStage:'2龄第3天', larvaCount:16200, breedDays:11, todayFeedDone:2, todayFeedTotal:2, todayLeafFed:55, todayLeafNeed:55,  batchLeafFed:230, batchLeafTotal:520,
+              bodyLength:'1.7 cm', bodyWeight:'0.4 g', survivalRate:'99.7%', moltStatus:'齐整', mountTime:'6月22日',
+              batchCode:'SC-2026-08', batchBreed:'菁松×皓月', batchDate:'05-17', batchCount:'16300 头', batchSource:'省蚕种场', batchNote:'—',
+              manageTrays:'31 座', manageTrayNormal:31, manageTrayIsolate:0, manageDensAvg:305, manageDensMax:330, manageDensMin:275, manageDensity:'正常', manageLastExpand:'05-19', manageNextExpand:'05-26', manageTrayDisinfect:'05-25', manageTrayNextDisinfect:'05-28 上午', manageSandDone:12, manageSandTotal:31, manageStaff:'周师傅',
+              feedStock:170, healthRisk:'当前无病害风险，幼蚕防疫注意卫生', healthRiskLv:'normal', healthLastMed:'05-24 防僵粉', healthNextMed:'05-28',
+              healthDisinfect:'蚕体消毒', healthNextDisinfect:'05-28 上午', healthDeadNow:0, healthDeadLast:0, healthDeadMethod:'焚烧', healthScore:99 },
+            { id:8,  name:'蚕室 08号', temp:'24.0°', humidity:'80%', devices:{power:1,wifi:1,fan:1,snow:0,shower:0,fire:0}, status:'normal',
+              larvaStage:'3龄第4天', larvaCount:15100, breedDays:15, todayFeedDone:2, todayFeedTotal:3, todayLeafFed:82, todayLeafNeed:122, batchLeafFed:460, batchLeafTotal:860,
+              bodyLength:'2.8 cm', bodyWeight:'1.2 g', survivalRate:'99.8%', moltStatus:'齐整', mountTime:'6月12日',
+              batchCode:'SC-2026-09', batchBreed:'菁松×皓月', batchDate:'05-12', batchCount:'15300 头', batchSource:'省蚕种场', batchNote:'桑叶供应商5月20日更换，新供应商叶片偏嫩，已调整喂量',
+              manageTrays:'30 座', manageTrayNormal:30, manageTrayIsolate:0, manageDensAvg:315, manageDensMax:345, manageDensMin:285, manageDensity:'正常', manageLastExpand:'05-24', manageNextExpand:'05-29', manageTrayDisinfect:'05-26', manageTrayNextDisinfect:'05-28 上午', manageSandDone:3, manageSandTotal:30, manageStaff:'杨师傅',
+              feedStock:200, healthRisk:'当前无病害风险，注意通风防僵病', healthRiskLv:'normal', healthLastMed:'05-25 防僵粉', healthNextMed:'05-29',
+              healthDisinfect:'蚕体+地面消毒', healthNextDisinfect:'05-28 晚间', healthDeadNow:0, healthDeadLast:0, healthDeadMethod:'焚烧', healthScore:98 },
+        ];
+
+        // localStorage 持久化：优先读取缓存，否则用默认数据
+        const saved = localStorage.getItem('silkworm_rooms');
+        let roomsData = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_ROOMS));
+
+        let currentRoom = roomsData[0];
+
+        /* 后台新增蚕室示例：
+           roomsData.push({
+               id:9, name:'蚕室 09号', temp:'24°', humidity:'80%',
+               devices:{power:1,wifi:1,fan:1,snow:0,shower:0,fire:0},
+               status:'normal',
+               larvaStage:'3龄第4天', larvaCount:15000, breedDays:15,
+               todayFeedDone:2, todayFeedTotal:3,
+               todayLeafFed:80, todayLeafNeed:120,
+               batchLeafFed:450, batchLeafTotal:850
+           });
+           renderRoomList(roomsData);
+        */
+
+        // ============================================================
+        //  设备图标映射：power | wifi | fan | snow | shower | fire
+        //  状态: 1=运行(on绿灯)  0=关闭(暗)  -1=故障(on红灯)
+        // ============================================================
+        const deviceDefs = [
+            { key:'power',  icon:'fa-power-off',      label:'电源' },
+            { key:'wifi',   icon:'fa-wifi',            label:'网络' },
+            { key:'fan',    icon:'fa-fan',             label:'通风', spin:true },
+            { key:'snow',   icon:'fa-snowflake',        label:'制冷' },
+            { key:'shower', icon:'fa-shower',          label:'加湿' },
+            { key:'fire',   icon:'fa-fire',            label:'加热' },
+        ];
+
+        function buildDeviceIcon(key, state, small = true) {
+            const def = deviceDefs.find(d => d.key === key);
+            if (!def) return '';
+            if (small) {
+                let cls = 'dev-icon';
+                if (state === 1)  cls += ' on';
+                if (state === -1) cls += ' on error';
+                if (def.spin && state === 1) cls += ' fan-spin';
+                return `<i class="fa ${def.icon} ${cls}" title="${def.label}"></i>`;
+            }
+            // 大号设备网格项
+            const stateCls = state === 1 ? 'on' : state === -1 ? 'error' : 'off';
+            const statusText = state === 1 ? '运行' : state === -1 ? '故障' : '关闭';
+            const spinCls = (def.spin && state === 1) ? ' fan-spin' : '';
+            return `
+                <div class="env-device-item ${stateCls}">
+                    <i class="fa ${def.icon} dev-icon-large${spinCls}"></i>
+                    <span class="dev-label">${def.label}</span>
+                    <span class="dev-status-txt">${statusText}</span>
+                </div>`;
+        }
+
+        // ============================================================
+        //  渲染详情面板环境参数（设备网格）
+        // ============================================================
+        function updateEnvCard(room) {
+            const tempEl = document.getElementById('envTempVal');
+            const humEl  = document.getElementById('envHumidityVal');
+            const badgeEl = document.getElementById('envStatusBadge');
+            const gridEl  = document.getElementById('envDeviceGrid');
+
+            if (tempEl) tempEl.textContent = room.temp;
+            if (humEl)  humEl.textContent  = room.humidity;
+
+            // 状态徽章
+            if (badgeEl) {
+                badgeEl.className = 'head-badge';
+                if (room.status === 'normal') { badgeEl.classList.add('badge-normal'); badgeEl.textContent = '正常'; }
+                else if (room.status === 'warn') { badgeEl.classList.add('badge-warn'); badgeEl.textContent = '偏高'; }
+                else if (room.status === 'offline') { badgeEl.classList.add('badge-offline'); badgeEl.textContent = '离线'; }
+                else { badgeEl.classList.add('badge-error'); badgeEl.textContent = '异常'; }
+            }
+
+            // 温湿度文字颜色切换
+            if (tempEl) {
+                tempEl.className = 'env-hero-val';
+                if (room.status === 'warn')  tempEl.style.color = '#ffdd44';
+                else if (room.status === 'error') tempEl.style.color = '#ff5555';
+                else tempEl.style.color = '#e8f4ff';
+            }
+
+            // 设备网格
+            if (gridEl) {
+                const d = room.devices;
+                gridEl.innerHTML = deviceDefs.map(dd => buildDeviceIcon(dd.key, d[dd.key], false)).join('');
+            }
+        }
+
+        // ============================================================
+        //  渲染详情面板喂养概况
+        // ============================================================
+        function updateFeedCard(room) {
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+            const setHtml = (id, val) => { const el = document.getElementById(id); if (el) el.innerHTML = val; };
+
+            set('feedLarvaStage', room.larvaStage);
+            set('feedLarvaCount', room.larvaCount);
+            set('feedBreedDays', room.breedDays);
+
+            // 今日喂养进度条
+            const todayPct = room.todayFeedTotal > 0 ? (room.todayFeedDone / room.todayFeedTotal * 100) : 0;
+            const todayBar = document.getElementById('feedTodayBar');
+            const todayRatio = document.getElementById('feedTodayRatio');
+            if (todayBar) {
+                todayBar.style.width = todayPct + '%';
+                todayBar.className = 'gauge-fill ' + (todayPct >= 100 ? 'normal' : todayPct >= 50 ? 'normal' : 'warn');
+            }
+            if (todayRatio) {
+                todayRatio.textContent = room.todayFeedDone + '/' + room.todayFeedTotal + ' 餐';
+                todayRatio.style.color = todayPct >= 100 ? '#39ff99' : todayPct >= 50 ? '#39ff99' : '#ffdd44';
+            }
+
+            set('feedTodayLeafFed', room.todayLeafFed);
+            set('feedTodayLeafNeed', room.todayLeafNeed);
+            set('feedStock', (room.feedStock || 0) + ' 斤');
+
+            // 本批喂养进度
+            set('feedBatchFed', room.batchLeafFed);
+            set('feedBatchTotal', room.batchLeafTotal);
+            const remain = room.batchLeafTotal - room.batchLeafFed;
+            set('feedBatchRemain', remain > 0 ? remain : 0);
+
+            const batchPct = room.batchLeafTotal > 0 ? (room.batchLeafFed / room.batchLeafTotal * 100) : 0;
+            const batchBar = document.getElementById('feedBatchBar');
+            if (batchBar) {
+                batchBar.style.width = batchPct + '%';
+                batchBar.className = 'progress-fill ' + (batchPct >= 80 ? 'amber' : 'green');
+            }
+
+            // 喂养状态徽章
+            const badgeEl = document.getElementById('feedStatusBadge');
+            if (badgeEl) {
+                badgeEl.className = 'head-badge';
+                if (room.status === 'normal') { badgeEl.classList.add('badge-normal'); badgeEl.textContent = '正常'; }
+                else if (room.status === 'warn') { badgeEl.classList.add('badge-warn'); badgeEl.textContent = '注意'; }
+                else if (room.status === 'offline') { badgeEl.classList.add('badge-offline'); badgeEl.textContent = '离线'; }
+                else { badgeEl.classList.add('badge-error'); badgeEl.textContent = '异常'; }
+            }
+        }
+
+        // ============================================================
+        //  生成生长数据（体长cm / 体重g，按养殖天数）
+        // ============================================================
+        function generateGrowthData(room) {
+            // 如果有真实数据（每行：天,体长cm,体重g），优先使用
+            if (room.growthData && room.growthData.trim()) {
+                const labels = [], lengths = [], weights = [];
+                const lines = room.growthData.trim().split(/\n/);
+                for (const line of lines) {
+                    const parts = line.split(',').map(s => s.trim());
+                    if (parts.length >= 3) {
+                        labels.push('D' + parts[0]);
+                        lengths.push(parseFloat(parts[1]) || 0);
+                        weights.push(parseFloat(parts[2]) || 0);
+                    }
+                }
+                if (labels.length > 0) return { labels, lengths, weights };
+            }
+
+            // 无真实数据则模拟
+            const days = room.breedDays || 15;
+            const labels = [], lengths = [], weights = [];
+            const maxL = parseFloat(room.bodyLength) || 3.0;
+            const maxW = parseFloat(room.bodyWeight) || 1.5;
+            for (let d = 1; d <= days; d++) {
+                labels.push('D' + d);
+                const ratio = d / days;
+                const curve = 1 / (1 + Math.exp(-8 * (ratio - 0.45)));
+                lengths.push(+(maxL * curve).toFixed(2));
+                weights.push(+(maxW * curve).toFixed(2));
+            }
+            return { labels, lengths, weights };
+        }
+
+        // ============================================================
+        //  蚕虫监控图表实例
+        // ============================================================
+        let growthChart = null;
+
+        function updateMonitorCard(room) {
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+            set('monBodyLength', room.bodyLength);
+            set('monBodyWeight', room.bodyWeight);
+            set('monSurvival', room.survivalRate);
+            set('monMolt', room.moltStatus);
+            set('monMount', room.mountTime);
+
+            // 上簇倒计时：mountTime - 今天
+            const countdownEl = document.getElementById('monCountdown');
+            if (countdownEl && room.mountTime) {
+                const match = room.mountTime.match(/(\d+)月(\d+)日/);
+                if (match) {
+                    const now = new Date();
+                    const target = new Date(now.getFullYear(), parseInt(match[1]) - 1, parseInt(match[2]));
+                    const diff = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+                    if (diff > 0) {
+                        countdownEl.textContent = diff + ' 天';
+                        countdownEl.style.color = diff <= 3 ? '#ff5555' : diff <= 7 ? '#ffdd44' : '#ffb400';
+                    } else if (diff === 0) {
+                        countdownEl.textContent = '今天';
+                        countdownEl.style.color = '#ff5555';
+                    } else {
+                        countdownEl.textContent = '已上簇';
+                        countdownEl.style.color = '#c882ff';
+                    }
+                }
+            }
+
+            // 成活率颜色
+            const survEl = document.getElementById('monSurvival');
+            if (survEl) {
+                const v = parseFloat(room.survivalRate);
+                survEl.style.color = v >= 99 ? '#39ff99' : v >= 95 ? '#ffdd44' : '#ff5555';
+            }
+
+            // 状态徽章
+            const badgeEl = document.getElementById('monitorStatusBadge');
+            if (badgeEl) {
+                badgeEl.className = 'head-badge';
+                if (room.status === 'normal') { badgeEl.classList.add('badge-normal'); badgeEl.textContent = '正常'; }
+                else if (room.status === 'warn') { badgeEl.classList.add('badge-warn'); badgeEl.textContent = '注意'; }
+                else if (room.status === 'offline') { badgeEl.classList.add('badge-offline'); badgeEl.textContent = '离线'; }
+                else { badgeEl.classList.add('badge-error'); badgeEl.textContent = '异常'; }
+            }
+
+            // 折线图
+            const ctx = document.getElementById('growthChart');
+            if (!ctx) return;
+            if (growthChart) { growthChart.destroy(); growthChart = null; }
+
+            const data = generateGrowthData(room);
+            growthChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        {
+                            label: '体长(cm)',
+                            data: data.lengths,
+                            borderColor: '#ff7840',
+                            backgroundColor: 'rgba(255,120,64,0.08)',
+                            borderWidth: 2,
+                            pointRadius: 1.5,
+                            pointBackgroundColor: '#ff7840',
+                            tension: 0.4,
+                            fill: true,
+                        },
+                        {
+                            label: '体重(g)',
+                            data: data.weights,
+                            borderColor: '#00d8ff',
+                            backgroundColor: 'rgba(0,216,255,0.06)',
+                            borderWidth: 2,
+                            pointRadius: 1.5,
+                            pointBackgroundColor: '#00d8ff',
+                            tension: 0.4,
+                            fill: true,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#8aaccc',
+                                font: { size: 9 },
+                                boxWidth: 10,
+                                padding: 8,
+                                usePointStyle: true,
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#5a7898', font: { size: 8 }, maxTicksLimit: 10 },
+                            grid: { color: 'rgba(0,180,255,0.06)' },
+                        },
+                        y: {
+                            ticks: { color: '#5a7898', font: { size: 8 }, callback: v => v.toFixed(1) },
+                            grid: { color: 'rgba(0,180,255,0.06)' },
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        //  渲染详情面板批次资料
+        // ============================================================
+        function updateBatchCard(room) {
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+            set('batchCode', room.batchCode);
+            set('batchBreed', room.batchBreed);
+            set('batchDate', room.batchDate);
+            set('batchCount', room.batchCount);
+            set('batchSource', room.batchSource);
+            set('batchNote', room.batchNote || '—');
+            // 状态徽章
+            const badgeEl = document.getElementById('batchStatusBadge');
+            if (badgeEl) {
+                badgeEl.className = 'head-badge';
+                if (room.status === 'normal') { badgeEl.classList.add('badge-normal'); badgeEl.textContent = '正常'; }
+                else if (room.status === 'warn') { badgeEl.classList.add('badge-warn'); badgeEl.textContent = '注意'; }
+                else if (room.status === 'offline') { badgeEl.classList.add('badge-offline'); badgeEl.textContent = '离线'; }
+                else { badgeEl.classList.add('badge-error'); badgeEl.textContent = '异常'; }
+            }
+        }
+
+        // ============================================================
+        //  渲染详情面板蚕座管理
+        // ============================================================
+        function updateManageCard(room) {
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
+            set('manageTrays', room.manageTrays);
+            set('manageTrayNormal', room.manageTrayNormal + ' 正常');
+            set('manageTrayIsolate', room.manageTrayIsolate + ' 隔离');
+            const isoEl = document.getElementById('manageTrayIsolate');
+            if (isoEl) isoEl.style.color = room.manageTrayIsolate > 0 ? '#ffdd44' : '#4a6a88';
+
+            set('manageDensDetail', '均' + room.manageDensAvg + ' 最' + room.manageDensMax + ' 低' + room.manageDensMin + ' 头/座');
+
+            set('manageLastExpand', room.manageLastExpand);
+            set('manageNextExpand', room.manageNextExpand);
+            set('manageTrayDisinfect', room.manageTrayDisinfect);
+            set('manageTrayNextDisinfect', room.manageTrayNextDisinfect);
+
+            // 除沙进度
+            const sandPct = room.manageSandTotal > 0 ? (room.manageSandDone / room.manageSandTotal * 100) : 0;
+            const sandBar = document.getElementById('manageSandBar');
+            const sandRatio = document.getElementById('manageSandRatio');
+            if (sandBar) sandBar.style.width = sandPct + '%';
+            if (sandRatio) sandRatio.textContent = room.manageSandDone + '/' + room.manageSandTotal + ' 座';
+
+            set('manageStaff', room.manageStaff);
+
+            // 状态徽章
+            const badgeEl = document.getElementById('manageStatusBadge');
+            if (badgeEl) {
+                badgeEl.className = 'head-badge';
+                if (room.status === 'normal') { badgeEl.classList.add('badge-normal'); badgeEl.textContent = '正常'; }
+                else if (room.status === 'warn') { badgeEl.classList.add('badge-warn'); badgeEl.textContent = '注意'; }
+                else if (room.status === 'offline') { badgeEl.classList.add('badge-offline'); badgeEl.textContent = '离线'; }
+                else { badgeEl.classList.add('badge-error'); badgeEl.textContent = '异常'; }
+            }
+        }
+
+        // ============================================================
+        //  渲染详情面板防疫健康
+        // ============================================================
+        function updateHealthCard(room) {
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
+            // 风险预警
+            const banner = document.getElementById('healthRiskBanner');
+            const riskTxt = document.getElementById('healthRiskTxt');
+            if (banner) {
+                banner.className = 'risk-banner ' + room.healthRiskLv;
+                const icon = room.healthRiskLv === 'normal' ? 'fa-check-circle' : room.healthRiskLv === 'warn' ? 'fa-exclamation-triangle' : 'fa-times-circle';
+                banner.querySelector('i').className = 'fa ' + icon;
+            }
+            if (riskTxt) riskTxt.textContent = room.healthRisk;
+
+            // 用药
+            set('healthLastMed', room.healthLastMed);
+            set('healthNextMed', room.healthNextMed);
+
+            // 消毒
+            set('healthDisinfect', room.healthDisinfect);
+            set('healthNextDisinfect', room.healthNextDisinfect);
+
+            // 病死蚕
+            set('healthDeadNow', room.healthDeadNow + ' 只');
+            set('healthDeadMethod', room.healthDeadMethod);
+
+            // 趋势对比
+            const trendEl = document.getElementById('healthDeadTrend');
+            if (trendEl) {
+                const diff = room.healthDeadNow - room.healthDeadLast;
+                if (diff > 0) {
+                    trendEl.textContent = `上周${room.healthDeadLast} ↗+${diff}`;
+                    trendEl.className = 'trend-up';
+                } else if (diff < 0) {
+                    trendEl.textContent = `上周${room.healthDeadLast} ↘${diff}`;
+                    trendEl.className = 'trend-down';
+                } else {
+                    trendEl.textContent = room.healthDeadLast === 0 ? '上周0 无异常' : `上周${room.healthDeadLast} →持平`;
+                    trendEl.className = 'trend-flat';
+                }
+            }
+
+            // 健康评分
+            set('healthScoreNum', room.healthScore);
+            const bar = document.getElementById('healthScoreBar');
+            if (bar) {
+                bar.style.width = room.healthScore + '%';
+                bar.className = 'health-score-fill ' + (room.healthScore >= 80 ? 'high' : room.healthScore >= 60 ? 'mid' : 'low');
+            }
+
+            // 状态徽章
+            const badgeEl = document.getElementById('healthStatusBadge');
+            if (badgeEl) {
+                badgeEl.className = 'head-badge';
+                if (room.status === 'normal') { badgeEl.classList.add('badge-normal'); badgeEl.textContent = '正常'; }
+                else if (room.status === 'warn') { badgeEl.classList.add('badge-warn'); badgeEl.textContent = '注意'; }
+                else if (room.status === 'offline') { badgeEl.classList.add('badge-offline'); badgeEl.textContent = '离线'; }
+                else { badgeEl.classList.add('badge-error'); badgeEl.textContent = '风险'; }
+            }
+        }
+
+        // ============================================================
+        //  渲染单个蚕室卡片（紧凑风格）
+        // ============================================================
+        function buildRoomCard(room, isActive = false) {
+            const d = room.devices;
+            const devicesHTML = deviceDefs.map(dd => buildDeviceIcon(dd.key, d[dd.key])).join('');
+            return `
+                <div class="room-item${isActive ? ' active' : ''}" data-id="${room.id}">
+                    <div class="room-card-header">
+                        <span class="room-name${room.status === 'offline' ? ' offline' : ''}">${room.name}</span>
+                        <span class="room-status-dot ${room.status}" title="${room.status}"></span>
+                    </div>
+                    <div class="room-divider"></div>
+                    <div class="room-env-row">
+                        <span class="env-item">
+                            <i class="fa fa-thermometer-half env-icon"></i>
+                            <span class="env-val">${room.temp}</span>
+                        </span>
+                        <span class="env-item">
+                            <i class="fa fa-tint env-icon"></i>
+                            <span class="env-val">${room.humidity}</span>
+                        </span>
+                    </div>
+                    <div class="room-device-bar">
+                        ${devicesHTML}
+                    </div>
+                </div>`;
+        }
+
+        // ============================================================
+        //  渲染全部蚕室列表
+        // ============================================================
+        function renderRoomList(dataList, activeId = 1) {
+            const container = document.getElementById('roomListContainer');
+            container.innerHTML = dataList.map(r => buildRoomCard(r, r.id === activeId)).join('');
+            bindRoomClicks();
+        }
+
+        // ============================================================
+        //  绑定点击事件（切换激活 + 更新中间详情标题）
+        // ============================================================
+        function bindRoomClicks() {
+            const detailTitle = document.getElementById('detailTitle');
+            const items = document.querySelectorAll('.room-item');
+            items.forEach(item => {
+                item.addEventListener('click', function () {
+                    items.forEach(i => i.classList.remove('active'));
+                    this.classList.add('active');
+                    // 找到对应数据
+                    const id = parseInt(this.getAttribute('data-id'));
+                    const room = roomsData.find(r => r.id === id);
+                    if (room) {
+                        if (detailTitle) detailTitle.innerText = `【${room.name}】实时监控详情`;
+                        updateEnvCard(room);
+                        updateFeedCard(room);
+                        updateMonitorCard(room);
+                        updateBatchCard(room);
+                        updateManageCard(room);
+                        updateHealthCard(room);
+                        updateStatusBar(room);
+                    }
+                });
+            });
+        }
+
+        // ============================================================
+        //  全局实时告警（扫描所有蚕室风险 + 健康预警）
+        // ============================================================
+        function updateGlobalAlerts() {
+            const container = document.getElementById('globalAlerts');
+            if (!container) return;
+
+            const warns = roomsData.filter(r => r.status === 'warn' || r.status === 'error' || r.healthRiskLv === 'warn' || r.healthRiskLv === 'error');
+            let html = '';
+
+            warns.forEach(r => {
+                const icon = r.healthRiskLv === 'error' || r.status === 'error' ? 'fa-times-circle' : 'fa-exclamation-triangle';
+                const color = r.healthRiskLv === 'error' || r.status === 'error' ? '#ff5555' : '#ffdd44';
+                html += `<div class="warn-item" style="color:${color}"><i class="fa ${icon}" style="margin-right:6px"></i> ${r.name}：${r.healthRisk}</div>`;
+            });
+
+            if (warns.length === 0) {
+                html = '<div class="warn-item"><i class="fa fa-check-circle" style="color:#39ff99;margin-right:6px"></i> 所有蚕室运行正常，无病害风险</div>';
+            }
+
+            container.innerHTML = html;
+            checkAlertBlink();
+        }
+
+        // ============================================================
+        //  全局集群统计（动态计算 + SVG 环形图）
+        // ============================================================
+        function updateGlobalStats() {
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+            const total   = roomsData.length;
+            const normal  = roomsData.filter(r => r.status === 'normal').length;
+            const warn    = roomsData.filter(r => r.status === 'warn').length;
+            const error   = roomsData.filter(r => r.status === 'error').length;
+            const offline = roomsData.filter(r => r.status === 'offline').length;
+            const online = roomsData.filter(r => r.devices.power === 1).length;
+            const totalLarva = roomsData.reduce((s, r) => s + (r.larvaCount || 0), 0);
+            const totalLeaf  = roomsData.reduce((s, r) => s + (r.todayLeafFed || 0), 0);
+            const totalDead  = roomsData.reduce((s, r) => s + (r.healthDeadNow || 0), 0);
+            const avgScore   = Math.round(roomsData.reduce((s, r) => s + (r.healthScore || 0), 0) / total);
+            const deadRate   = totalLarva > 0 ? ((totalDead / totalLarva) * 100).toFixed(2) : '0.00';
+
+            set('statTotal', total);
+            set('statOnline', online);
+            set('statTotalLarva', totalLarva.toLocaleString() + ' 头');
+            set('statTotalLeaf', totalLeaf + ' 斤');
+            set('statDeadRate', deadRate + '%');
+            set('statAvgScore', avgScore);
+            set('statLegendNormal', normal);
+            set('statLegendWarn', warn);
+            set('statLegendError', error);
+
+            // 正常率
+            const pct = total > 0 ? Math.round(normal / total * 100) : 0;
+            set('statNormalRate', pct + '%');
+            const npEl = document.getElementById('statNormalRate');
+            if (npEl) npEl.className = 'row-value ' + (pct >= 80 ? 'val-normal' : pct >= 60 ? 'val-warn' : 'val-error');
+
+            // 平均分颜色
+            const asEl = document.getElementById('statAvgScore');
+            if (asEl) asEl.style.color = avgScore >= 80 ? '#39ff99' : avgScore >= 60 ? '#ffdd44' : '#ff5555';
+
+            // 分布条
+            const barN = document.getElementById('statBarNormal');
+            const barW = document.getElementById('statBarWarn');
+            const barE = document.getElementById('statBarError');
+            if (barN) barN.style.width = total > 0 ? (normal / total * 100) + '%' : '0%';
+            if (barW) barW.style.width = total > 0 ? (warn / total * 100) + '%' : '0%';
+            if (barE) barE.style.width = total > 0 ? (error / total * 100) + '%' : '0%';
+
+            // SVG 环形图
+            const ring = document.getElementById('statRing');
+            if (!ring) return;
+            const cx = 25, cy = 25, r = 20, sw = 6;
+            const circ = 2 * Math.PI * r;
+            const totalRooms = normal + warn + error || 1;
+            const nLen = (normal / totalRooms) * circ;
+            const wLen = (warn / totalRooms) * circ;
+            const eLen = (error / totalRooms) * circ;
+            ring.innerHTML = `
+                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="${sw}"/>
+                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#39ff99" stroke-width="${sw}"
+                    stroke-dasharray="${nLen} ${circ - nLen}" stroke-dashoffset="0" stroke-linecap="round"
+                    transform="rotate(-90 ${cx} ${cy})"/>
+                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#ffdd44" stroke-width="${sw}"
+                    stroke-dasharray="${wLen} ${circ - wLen}" stroke-dashoffset="${-nLen}" stroke-linecap="butt"
+                    transform="rotate(-90 ${cx} ${cy})"/>
+                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#ff5555" stroke-width="${sw}"
+                    stroke-dasharray="${eLen} ${circ - eLen}" stroke-dashoffset="${-(nLen + wLen)}" stroke-linecap="round"
+                    transform="rotate(-90 ${cx} ${cy})"/>
+                <text x="${cx}" y="${cy}" text-anchor="middle" dy="4" fill="#e8f4ff" font-size="9" font-weight="bold">${total}</text>`;
+        }
+
+        // ============================================================
+        //  告警闪烁检测
+        // ============================================================
+        function checkAlertBlink() {
+            const card = document.getElementById('alertCard');
+            if (!card) return;
+            const warns = roomsData.filter(r => r.status === 'warn' || r.status === 'error' || r.healthRiskLv === 'warn' || r.healthRiskLv === 'error');
+            card.classList.toggle('alert-blink', warns.length > 0);
+        }
+
+        // ============================================================
+        //  状态栏联动选中蚕室
+        // ============================================================
+        function updateStatusBar(room) {
+            const dot = document.getElementById('statusBarDot');
+            const txt = document.getElementById('statusBarText');
+            if (dot) { dot.className = 'summary-dot ' + (room.status === 'normal' ? 'ok' : room.status === 'warn' ? 'warn' : room.status === 'offline' ? 'offline' : 'err'); }
+            if (txt) {
+                const map = { normal: '正常', warn: '预警', error: '异常', offline: '离线' };
+                txt.textContent = map[room.status] || room.status;
+                txt.style.color = room.status === 'normal' ? '#39ff99' : room.status === 'warn' ? '#ffdd44' : room.status === 'offline' ? '#6a7a8a' : '#ff5555';
+            }
+            currentRoom = room;
+            // 环形图高亮
+            const ring = document.getElementById('statRing');
+            if (ring) { ring.classList.add('ring-glow'); setTimeout(() => ring.classList.remove('ring-glow'), 800); }
+        }
+
+        // ============================================================
+        //  CSV 导出
+        // ============================================================
+        function exportCSV() {
+            const headers = ['ID','名称','温度','湿度','状态','蚕龄','现存(头)','养殖天数','体长','体重','成活率','起眠','上簇','批次编号','品种','收蚁日期','投放数量','来源','备注','蚕座','正常座','隔离座','密度','上次扩座','计划匀座','蚕座消毒','下次消毒','已除沙','总除沙','当班','健康风险','上次用药','下次用药','消毒方式','下次消毒','本周病死蚕','上周','处理方式','健康评分'];
+            const rows = roomsData.map(r => [
+                r.id, r.name, r.temp, r.humidity, r.status, r.larvaStage, r.larvaCount, r.breedDays,
+                r.bodyLength, r.bodyWeight, r.survivalRate, r.moltStatus, r.mountTime,
+                r.batchCode, r.batchBreed, r.batchDate, r.batchCount, r.batchSource, r.batchNote || '',
+                r.manageTrays, r.manageTrayNormal, r.manageTrayIsolate, r.manageDensity,
+                r.manageLastExpand, r.manageNextExpand, r.manageTrayDisinfect, r.manageTrayNextDisinfect,
+                r.manageSandDone, r.manageSandTotal, r.manageStaff,
+                r.healthRisk, r.healthLastMed, r.healthNextMed, r.healthDisinfect, r.healthNextDisinfect,
+                r.healthDeadNow, r.healthDeadLast, r.healthDeadMethod, r.healthScore
+            ].map(v => String(v).includes(',') ? `"${v}"` : v).join(','));
+            const csv = '\uFEFF' + headers.join(',') + '\n' + rows.join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = '蚕室集群数据_' + new Date().toISOString().slice(0,10) + '.csv';
+            a.click(); URL.revokeObjectURL(url);
+        }
+
+        // ============================================================
+        //  后台管理：增删改查 + localStorage
+        // ============================================================
+        function saveToStorage() { localStorage.setItem('silkworm_rooms', JSON.stringify(roomsData)); }
+
+        function refreshAll() {
+            renderRoomList(roomsData, currentCarouselId);
+            updateEnvCard(currentRoom);
+            updateFeedCard(currentRoom);
+            updateMonitorCard(currentRoom);
+            updateBatchCard(currentRoom);
+            updateManageCard(currentRoom);
+            updateHealthCard(currentRoom);
+            updateStatusBar(currentRoom);
+            updateGlobalAlerts();
+            updateGlobalStats();
+        }
+
+        let editingRoomId = null; // null = 新增模式
+
+        function openAdmin() {
+            document.getElementById('adminOverlay').classList.add('show');
+            renderAdminTable();
+        }
+        function closeAdmin() { document.getElementById('adminOverlay').classList.remove('show'); }
+
+        function renderAdminTable() {
+            const tbody = document.querySelector('#adminTable tbody');
+            const devs = ['power','wifi','fan','snow','shower','fire'];
+            const devIcons = { power:'fa-power-off', wifi:'fa-wifi', fan:'fa-fan', snow:'fa-snowflake', shower:'fa-shower', fire:'fa-fire' };
+            const stateLabel = { 1:'on', 0:'off', '-1':'err' };
+            tbody.innerHTML = roomsData.map(r => {
+                const statusClr = r.status === 'normal' ? '#39ff99' : r.status === 'warn' ? '#ffdd44' : r.status === 'offline' ? '#7a8a9a' : '#ff5555';
+                const statusLabel = { normal: '正常', warn: '预警', error: '异常', offline: '离线' }[r.status] || r.status;
+                const devsHTML = devs.map(dk => {
+                    const st = r.devices[dk];
+                    const cls = stateLabel[String(st)] || 'off';
+                    return `<td><i class="fa ${devIcons[dk]} dev-toggle ${cls}" title="${dk}" onclick="toggleDevice(${r.id},'${dk}')" style="font-size:15px"></i></td>`;
+                }).join('');
+                return `<tr>
+                    <td>${r.id}</td>
+                    <td><strong>${r.name}</strong></td>
+                    <td><span style="color:${statusClr}">${statusLabel}</span></td>
+                    ${devsHTML}
+                    <td style="text-align:center;white-space:nowrap">
+                        <button class="admin-btn small" onclick="openEditRoom(${r.id})"><i class="fa fa-pen"></i></button>
+                        <button class="admin-btn small danger" onclick="deleteRoom(${r.id})"><i class="fa fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function toggleDevice(roomId, key) {
+            const room = roomsData.find(r => r.id === roomId);
+            if (!room) return;
+            const cycle = [1, 0, -1];
+            const idx = cycle.indexOf(room.devices[key]);
+            room.devices[key] = cycle[(idx + 1) % 3];
+            saveToStorage();
+            renderAdminTable();
+            if (currentRoom.id === roomId) { updateEnvCard(currentRoom); updateStatusBar(currentRoom); }
+            refreshAll();
+        }
+
+        function openEditRoom(id) {
+            editingRoomId = id || null;
+            document.getElementById('editModal').classList.add('show');
+            document.getElementById('editTitle').textContent = id ? '编辑蚕室 #' + id : '新增蚕室';
+
+            const room = id ? roomsData.find(r => r.id === id) : {};
+            if (!room && id) return;
+
+            const fill = (fid, val) => { const el = document.getElementById(fid); if (el) el.value = val || ''; };
+            fill('efName', room.name);
+            fill('efStatus', room.status || 'normal');
+            fill('efTemp', room.temp);
+            fill('efHum', room.humidity);
+            fill('efLarvaStage', room.larvaStage);
+            fill('efLarvaCount', room.larvaCount);
+            fill('efBreedDays', room.breedDays);
+            fill('efPower', room.devices?.power ?? 1);
+            fill('efWifi', room.devices?.wifi ?? 1);
+            fill('efFan', room.devices?.fan ?? 1);
+            fill('efSnow', room.devices?.snow ?? 0);
+            fill('efShower', room.devices?.shower ?? 0);
+            fill('efFire', room.devices?.fire ?? 0);
+            fill('efFeedDone', room.todayFeedDone);
+            fill('efFeedTotal', room.todayFeedTotal);
+            fill('efTodayLeafFed', room.todayLeafFed);
+            fill('efTodayLeafNeed', room.todayLeafNeed);
+            fill('efBatchLeafFed', room.batchLeafFed);
+            fill('efBatchLeafTotal', room.batchLeafTotal);
+            fill('efStock', room.feedStock || 200);
+            fill('efBodyLen', room.bodyLength);
+            fill('efBodyWt', room.bodyWeight);
+            fill('efSurv', room.survivalRate);
+            fill('efMolt', room.moltStatus);
+            fill('efMount', room.mountTime);
+            fill('efGrowthData', room.growthData || '');
+            fill('efBatchCode', room.batchCode);
+            fill('efBreed', room.batchBreed);
+            fill('efBatchDate', room.batchDate);
+            fill('efBatchCount', room.batchCount);
+            fill('efBatchSrc', room.batchSource);
+            fill('efBatchNote', room.batchNote);
+            fill('efMgTrays', room.manageTrays);
+            fill('efMgNorm', room.manageTrayNormal);
+            fill('efMgIso', room.manageTrayIsolate);
+            fill('efMgDensAvg', room.manageDensAvg ? `${room.manageDensAvg}-${room.manageDensMax}-${room.manageDensMin}` : '');
+            fill('efMgDensity', room.manageDensity);
+            fill('efMgLastExp', room.manageLastExpand);
+            fill('efMgNextExp', room.manageNextExpand);
+            fill('efMgDisinf', room.manageTrayDisinfect);
+            fill('efMgNextDis', room.manageTrayNextDisinfect);
+            fill('efMgSandDone', room.manageSandDone);
+            fill('efMgSandTotal', room.manageSandTotal);
+            fill('efMgStaff', room.manageStaff);
+            fill('efHlRisk', room.healthRisk);
+            fill('efHlRiskLv', room.healthRiskLv || 'normal');
+            fill('efHlLastMed', room.healthLastMed);
+            fill('efHlNextMed', room.healthNextMed);
+            fill('efHlDisinf', room.healthDisinfect);
+            fill('efHlNextDis', room.healthNextDisinfect);
+            fill('efHlDeadNow', room.healthDeadNow);
+            fill('efHlDeadLast', room.healthDeadLast);
+            fill('efHlDeadMtd', room.healthDeadMethod);
+            fill('efHlScore', room.healthScore);
+        }
+        function closeEditModal() { document.getElementById('editModal').classList.remove('show'); }
+
+        function saveRoom() {
+            const get = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+            const getInt = id => parseInt(get(id)) || 0;
+            const mgDens = get('efMgDensAvg');
+            const densParts = mgDens.includes('-') ? mgDens.split('-').map(Number) : [getInt('efMgDensAvg'), getInt('efMgDensAvg'), getInt('efMgDensAvg')];
+
+            const data = {
+                id: editingRoomId || (roomsData.length > 0 ? Math.max(...roomsData.map(r => r.id)) + 1 : 1),
+                name: get('efName'), temp: get('efTemp'), humidity: get('efHum'), status: get('efStatus'),
+                devices: { power:getInt('efPower'), wifi:getInt('efWifi'), fan:getInt('efFan'), snow:getInt('efSnow'), shower:getInt('efShower'), fire:getInt('efFire') },
+                larvaStage: get('efLarvaStage'), larvaCount: getInt('efLarvaCount'), breedDays: getInt('efBreedDays'),
+                todayFeedDone: getInt('efFeedDone'), todayFeedTotal: getInt('efFeedTotal'),
+                todayLeafFed: getInt('efTodayLeafFed'), todayLeafNeed: getInt('efTodayLeafNeed'),
+                batchLeafFed: getInt('efBatchLeafFed'), batchLeafTotal: getInt('efBatchLeafTotal'),
+                feedStock: getInt('efStock'),
+                bodyLength: get('efBodyLen'), bodyWeight: get('efBodyWt'), survivalRate: get('efSurv'),
+                moltStatus: get('efMolt'), mountTime: get('efMount'),
+                growthData: get('efGrowthData'),
+                batchCode: get('efBatchCode'), batchBreed: get('efBreed'), batchDate: get('efBatchDate'),
+                batchCount: get('efBatchCount'), batchSource: get('efBatchSrc'), batchNote: get('efBatchNote'),
+                manageTrays: (get('efMgTrays') || '0').includes('座') ? get('efMgTrays') : get('efMgTrays') + ' 座', manageTrayNormal: getInt('efMgNorm'), manageTrayIsolate: getInt('efMgIso'),
+                manageDensAvg: densParts[0] || 0, manageDensMax: densParts[1] || 0, manageDensMin: densParts[2] || 0,
+                manageDensity: get('efMgDensity'), manageLastExpand: get('efMgLastExp'), manageNextExpand: get('efMgNextExp'),
+                manageTrayDisinfect: get('efMgDisinf'), manageTrayNextDisinfect: get('efMgNextDis'),
+                manageSandDone: getInt('efMgSandDone'), manageSandTotal: getInt('efMgSandTotal'), manageStaff: get('efMgStaff'),
+                healthRisk: get('efHlRisk'), healthRiskLv: get('efHlRiskLv'),
+                healthLastMed: get('efHlLastMed'), healthNextMed: get('efHlNextMed'),
+                healthDisinfect: get('efHlDisinf'), healthNextDisinfect: get('efHlNextDis'),
+                healthDeadNow: getInt('efHlDeadNow'), healthDeadLast: getInt('efHlDeadLast'),
+                healthDeadMethod: get('efHlDeadMtd'), healthScore: getInt('efHlScore'),
+            };
+
+            if (editingRoomId) {
+                const idx = roomsData.findIndex(r => r.id === editingRoomId);
+                if (idx >= 0) roomsData[idx] = data;
+            } else {
+                roomsData.push(data);
+            }
+
+            saveToStorage();
+            closeEditModal();
+            renderAdminTable();
+            if (currentRoom.id === data.id) currentRoom = data;
+            currentCarouselId = currentRoom.id;
+            refreshAll();
+        }
+
+        function deleteRoom(id) {
+            if (!confirm(`确定删除蚕室 #${id}？此操作不可恢复。`)) return;
+            roomsData = roomsData.filter(r => r.id !== id);
+            if (roomsData.length === 0) { alert('至少保留一个蚕室！'); roomsData = [DEFAULT_ROOMS[0]]; }
+            saveToStorage();
+            if (currentRoom.id === id) { currentRoom = roomsData[0]; currentCarouselId = currentRoom.id; }
+            renderAdminTable();
+            refreshAll();
+        }
+
+        // 点击遮罩关闭
+        document.getElementById('adminOverlay').addEventListener('click', function(e) { if (e.target === this) closeAdmin(); });
+        document.getElementById('editModal').addEventListener('click', function(e) { if (e.target === this) closeEditModal(); });
+
+        // ============================================================
+        //  禁用 F1-F10/F12，ESC 关闭面板
+        // ============================================================
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') { closeAdmin(); closeEditModal(); return; }
+            if (e.key === 'F11') return;
+            if (e.key && e.key.startsWith('F') && e.key !== 'F11') {
+                const num = parseInt(e.key.slice(1));
+                if (!isNaN(num) && num >= 1 && num <= 12 && num !== 11) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            }
+        });
+
+        // ============================================================
+        //  状态栏实时时钟
+        // ============================================================
+        function updateStatusClock() {
+            const el = document.getElementById('statusClock');
+            if (!el) return;
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const d = String(now.getDate()).padStart(2, '0');
+            const week = ['日', '一', '二', '三', '四', '五', '六'][now.getDay()];
+            const h = String(now.getHours()).padStart(2, '0');
+            const mi = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            el.textContent = `${y}-${m}-${d} 周${week} ${h}:${mi}:${s}`;
+        }
+        updateStatusClock();
+        setInterval(updateStatusClock, 1000);
+
+        // ============================================================
+        //  蚕室轮播：电源亮的房间之间每 120 秒自动切换
+        // ============================================================
+        let carouselTimer = 120;
+        let currentCarouselId = 1;
+
+        function getPoweredRooms() {
+            return roomsData.filter(r => r.devices.power === 1).sort((a, b) => a.id - b.id);
+        }
+
+        function getNextPoweredRoom(currentId) {
+            const powered = getPoweredRooms();
+            if (powered.length === 0) return null;
+            const idx = powered.findIndex(r => r.id === currentId);
+            if (idx === -1 || idx >= powered.length - 1) return powered[0];
+            return powered[idx + 1];
+        }
+
+        function resetCarousel() {
+            carouselTimer = 120;
+            updateCarouselDisplay();
+        }
+
+        function updateCarouselDisplay() {
+            const nextRoom = getNextPoweredRoom(currentCarouselId);
+            const roomEl = document.getElementById('carouselRoom');
+            const timerEl = document.getElementById('carouselTimer');
+            if (roomEl && nextRoom) roomEl.textContent = nextRoom.name;
+            if (timerEl) {
+                timerEl.textContent = carouselTimer;
+                timerEl.style.color = carouselTimer <= 10 ? '#ff5555' : '#39ff99';
+            }
+        }
+
+        function carouselTick() {
+            carouselTimer--;
+            updateCarouselDisplay();
+            if (carouselTimer <= 0) {
+                const nextRoom = getNextPoweredRoom(currentCarouselId);
+                if (nextRoom) {
+                    // 切换左侧选中
+                    document.querySelectorAll('.room-item').forEach(i => {
+                        i.classList.remove('active');
+                        if (parseInt(i.getAttribute('data-id')) === nextRoom.id) i.classList.add('active');
+                    });
+                    // 更新详情
+                    const detailTitle = document.getElementById('detailTitle');
+                    if (detailTitle) detailTitle.innerText = `【${nextRoom.name}】实时监控详情`;
+                    updateEnvCard(nextRoom);
+                    updateFeedCard(nextRoom);
+                    updateMonitorCard(nextRoom);
+                    updateBatchCard(nextRoom);
+                    updateManageCard(nextRoom);
+                    updateHealthCard(nextRoom);
+                    updateStatusBar(nextRoom);
+                    currentCarouselId = nextRoom.id;
+                }
+                carouselTimer = 120;
+                updateCarouselDisplay();
+            }
+        }
+
+        // 手动点击蚕室时重置倒计时
+        const origBindRoomClicks = bindRoomClicks;
+        bindRoomClicks = function() {
+            origBindRoomClicks();
+            document.querySelectorAll('.room-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    if (!isNaN(id)) currentCarouselId = id;
+                    resetCarousel();
+                });
+            });
+        };
+
+        updateCarouselDisplay();
+        setInterval(carouselTick, 1000);
+
+        // ============================================================
+        //  初始化
+        // ============================================================
+        renderRoomList(roomsData, 1);
+        updateEnvCard(roomsData[0]);
+        updateFeedCard(roomsData[0]);
+        updateMonitorCard(roomsData[0]);
+        updateBatchCard(roomsData[0]);
+        updateManageCard(roomsData[0]);
+        updateHealthCard(roomsData[0]);
+        updateStatusBar(roomsData[0]);
+        updateGlobalAlerts();
+        updateGlobalStats();
+    </script>
+</body>
+</html>
