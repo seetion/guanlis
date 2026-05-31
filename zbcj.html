@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>桑园地块·点选生成坐标（单文件）</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {margin:0;padding:0;box-sizing:border-box;}
+        body {padding:15px;}
+        .tip {color:#2c5a2a;margin-bottom:10px;}
+        #map {width:100%;height:450px;border-radius:12px;}
+        #codeBox {width:100%;height:160px;margin-top:12px;padding:10px;border-radius:8px;border:1px solid #ccc;}
+        .btn {margin-top:8px;padding:6px 12px;background:#66bb6a;color:white;border:none;border-radius:6px;cursor:pointer;}
+    </style>
+</head>
+<body>
+    <div class="tip">📍 点击地图圈地块（4个角）→ 自动生成代码 → 复制到你的网站</div>
+    <div id="map"></div>
+    <textarea id="codeBox" placeholder="坐标代码自动生成在这里..."></textarea>
+    <button class="btn" onclick="clearAll()">清空重画（双击地图也可清空）</button>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // 1. 初始化地图（荔波坐标）
+        const map = L.map('map').setView([25.470, 107.638], 18);
+        // 卫星底图
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: ''
+        }).addTo(map);
+
+        // 2. 存点+画标记
+        let points = [];
+        let markers = [];
+        const codeBox = document.getElementById('codeBox');
+
+        // 点击地图
+        map.on('click', e => {
+            const lat = e.latlng.lat.toFixed(4);
+            const lng = e.latlng.lng.toFixed(4);
+            points.push([lat, lng]);
+            // 画红点标记
+            const m = L.marker([lat, lng]).addTo(map);
+            markers.push(m);
+            // 更新代码
+            updateCode();
+        });
+
+        // 3. 生成代码（直接可复制到你的网站）
+        function updateCode() {
+            let code = `{
+    coords: [
+`;
+            points.forEach(p => {
+                code += `        [${p[0]}, ${p[1]}],\n`;
+            });
+            code += `    ],
+    color: '#00BFFF',
+    name: '自定义地块'
+},`;
+            codeBox.value = code;
+        }
+
+        // 4. 清空
+        function clearAll() {
+            points = [];
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            codeBox.value = '';
+        }
+        // 双击清空
+        map.on('dblclick', clearAll);
+    </script>
+</body>
+</html>
